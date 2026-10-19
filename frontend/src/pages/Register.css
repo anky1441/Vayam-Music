@@ -1,0 +1,71 @@
+
+.register-page {
+  padding-top: 105px;
+  padding-bottom: 30px;
+}
+
+.register-card {
+  max-width: 470px;
+  padding-top: 30px;
+  padding-bottom: 28px;
+}
+
+.register-card .auth-symbol {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 19px;
+}
+
+.register-card .auth-subtitle {
+  margin-bottom: 23px;
+}
+
+.register-card .auth-field {
+  margin-bottom: 17px;
+}
+
+.register-hint {
+  display: block;
+  margin-top: 7px;
+  color: #8f829f;
+  font-size: 10px;
+}
+
+.register-error {
+  margin: 8px 0 0;
+  color: #fca5a5;
+  font-size: 11px;
+}
+
+.register-terms {
+  align-items: flex-start;
+  margin-top: 5px;
+  margin-bottom: 22px;
+  line-height: 1.8;
+}
+
+.register-terms input {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.register-terms a {
+  color: #c4a5fd;
+  text-decoration: none;
+}
+
+.register-terms a:hover {
+  text-decoration: underline;
+}
+
+.register-card .auth-bottom-note {
+  margin-top: 23px;
+  padding-top: 18px;
+}
+
+@media (max-width: 480px) {
+  .register-card {
+    padding-top: 25px;
+    padding-bottom: 24px;
+  }
+}
