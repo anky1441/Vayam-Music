@@ -1,0 +1,58 @@
+
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #D5C4A1;
+  background: #100C12;
+
+  --wood-brown: #563624;
+  --linen: #D5C4A1;
+  --clay: #64786E;
+  --patent-purple-brown: #53283E;
+  --vintage-port: #512027;
+  --forest-green: #1E2A20;
+
+  --background: #100C12;
+  --surface: #19121D;
+  --accent: #A855F7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+}
+
+button,
+a {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  color: var(--linen);
+  background: var(--patent-purple-brown);
+}

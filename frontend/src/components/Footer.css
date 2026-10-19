@@ -1,0 +1,386 @@
+
+.footer-section {
+  overflow: hidden;
+  padding: 0 7%;
+  background: #100b18;
+  color: #f8f4ff;
+}
+
+/* Final CTA */
+
+.footer-cta {
+  position: relative;
+  display: flex;
+  min-height: 340px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 10px auto 100px;
+  padding: 65px 30px;
+  border: 1px solid rgba(196, 165, 253, 0.2);
+  border-radius: 28px;
+  background:
+    radial-gradient(
+      ellipse at 50% 110%,
+      rgba(139, 92, 246, 0.26),
+      transparent 55%
+    ),
+    linear-gradient(135deg, #20152f, #171020 65%, #211431);
+  text-align: center;
+}
+
+.footer-cta-glow {
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  width: 360px;
+  height: 250px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.17);
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.footer-cta-content {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+}
+
+.footer-eyebrow {
+  display: inline-block;
+  margin-bottom: 22px;
+  color: #c4a5fd;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.footer-cta h2 {
+  margin: 0;
+  font-size: clamp(32px, 4.5vw, 52px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1.5px;
+}
+
+.footer-cta h2 span {
+  color: #c4a5fd;
+}
+
+.footer-cta-content > p {
+  max-width: 510px;
+  margin: 20px auto 28px;
+  color: #b6adca;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.footer-cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border: 1px solid #b99aff;
+  border-radius: 30px;
+  background: #b99aff;
+  color: #160d24;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.footer-cta-button:hover {
+  transform: translateY(-3px);
+  background: #d8b4fe;
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.25);
+}
+
+/* Decorative music symbols */
+
+.footer-decoration {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.footer-note {
+  position: absolute;
+  color: rgba(216, 180, 254, 0.25);
+  animation: footerFloat 5s ease-in-out infinite;
+}
+
+.note-one {
+  top: 23%;
+  left: 10%;
+  font-size: 42px;
+}
+
+.note-two {
+  right: 10%;
+  bottom: 22%;
+  font-size: 54px;
+  animation-delay: -2s;
+}
+
+.note-three {
+  top: 20%;
+  right: 20%;
+  color: rgba(216, 180, 254, 0.35);
+  font-size: 25px;
+  animation-delay: -1s;
+}
+
+.footer-orbit {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 1px solid rgba(196, 165, 253, 0.09);
+  border-radius: 50%;
+}
+
+.orbit-one {
+  top: -100px;
+  left: -60px;
+}
+
+.orbit-two {
+  right: -70px;
+  bottom: -120px;
+  width: 260px;
+  height: 260px;
+}
+
+@keyframes footerFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(5deg);
+  }
+}
+
+/* Footer navigation */
+
+.footer-main {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr 0.9fr 1.1fr;
+  gap: 45px;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding-bottom: 65px;
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #f8f4ff;
+  font-family: inherit;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  cursor: pointer;
+}
+
+.footer-logo-icon {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border: 1px solid rgba(196, 165, 253, 0.3);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.14);
+  color: #c4a5fd;
+  font-size: 23px;
+}
+
+.footer-logo-dot {
+  color: #b99aff;
+}
+
+.footer-brand > p {
+  margin: 17px 0 0;
+  color: #9f94b2;
+  font-size: 12px;
+  line-height: 2;
+}
+
+.footer-links-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.footer-links-group h3 {
+  margin: 5px 0 7px;
+  color: #f8f4ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.footer-links-group button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #a99dbb;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.footer-links-group button:hover {
+  color: #d8b4fe;
+}
+
+.footer-note-block {
+  padding-left: 22px;
+  border-left: 1px solid rgba(196, 165, 253, 0.17);
+}
+
+.footer-note-label {
+  color: #c4a5fd;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.footer-note-block p {
+  margin: 15px 0;
+  color: #c7bdd6;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.footer-mini-wave {
+  color: #9c7ae8;
+  font-size: 17px;
+  letter-spacing: 2px;
+}
+
+/* Copyright row */
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 23px 0;
+  border-top: 1px solid rgba(196, 165, 253, 0.13);
+}
+
+.footer-bottom p,
+.footer-bottom-tagline {
+  margin: 0;
+  color: #857991;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.footer-bottom-tagline span {
+  color: #c4a5fd;
+}
+
+/* Responsive layout */
+
+@media (max-width: 1000px) {
+  .footer-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px;
+  }
+
+  .footer-note-block {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer-section {
+    padding: 0 5%;
+  }
+
+  .footer-cta {
+    min-height: 320px;
+    margin-bottom: 65px;
+    padding: 50px 20px;
+    border-radius: 22px;
+  }
+
+  .footer-cta h2 {
+    letter-spacing: -1px;
+  }
+
+  .footer-eyebrow {
+    font-size: 9px;
+    letter-spacing: 2px;
+    line-height: 1.8;
+  }
+
+  .footer-cta-content > p {
+    font-size: 13px;
+  }
+
+  .note-one {
+    left: 4%;
+    font-size: 30px;
+  }
+
+  .note-two {
+    right: 4%;
+    font-size: 38px;
+  }
+
+  .note-three {
+    right: 8%;
+  }
+
+  .footer-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 35px 22px;
+    padding-bottom: 40px;
+  }
+
+  .footer-logo {
+    font-size: 23px;
+  }
+
+  .footer-logo-icon {
+    width: 33px;
+    height: 33px;
+  }
+
+  .footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-note {
+    animation: none;
+  }
+
+  .footer-cta-button {
+    transition: none;
+  }
+}
