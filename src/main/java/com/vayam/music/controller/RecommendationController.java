@@ -1,0 +1,28 @@
+package com.vayam.music.controller;
+
+import com.vayam.music.dto.RecommendationRequest;
+import com.vayam.music.dto.SongResponse;
+import com.vayam.music.service.RecommendationService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/recommendations")
+public class RecommendationController {
+    private final RecommendationService recommendationService;
+
+    public RecommendationController(RecommendationService recommendationService) {
+        this.recommendationService = recommendationService;
+    }
+
+    @PostMapping
+    public List<SongResponse> recommend(@RequestBody RecommendationRequest request) {
+        return recommendationService.recommend(request);
+    }
+
+    @GetMapping("/mood/{mood}")
+    public List<SongResponse> mood(@PathVariable String mood) {
+        return recommendationService.recommend(new RecommendationRequest(mood, null, null));
+    }
+}
