@@ -4,6 +4,7 @@ import com.vayam.music.dto.SongResponse;
 import com.vayam.music.model.Song;
 import com.vayam.music.repository.SongRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
+@Transactional(readOnly = true)
 public class SongService {
     private final SongRepository songRepository;
 
@@ -57,11 +59,21 @@ public class SongService {
         return songs.stream().map(SongResponse::from).toList();
     }
 
+    public List<SongResponse> byEnergy(String energy) {
+        if (energy == null || energy.isBlank()) return List.of();
+        String e = energy.trim();
+        List<Song> songs = songRepository.findByEnergyIgnoreCase(e);
+        if (songs.isEmpty()) {
+            songs = songRepository.findByEnergyContainingIgnoreCase(e);
+        }
+        return songs.stream().map(SongResponse::from).toList();
+    }
+
     public List<SongResponse> search(String q) {
         if (q == null || q.isBlank()) return all();
         String query = q.trim();
-        return songRepository.findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCase(
-                query, query, query, query, query
+        return songRepository.findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCaseOrEnergyContainingIgnoreCase(
+                query, query, query, query, query, query
         ).stream().map(SongResponse::from).toList();
     }
 

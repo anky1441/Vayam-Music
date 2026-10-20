@@ -10,7 +10,9 @@ import com.vayam.music.repository.PlaylistSongRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -51,8 +53,11 @@ public class PlaylistGeneratorService {
                 new Playlist(playlistName, "AI generated playlist for prompt: " + prompt, userService.getById(userId))
         );
 
+        Set<Long> addedSongIds = new java.util.LinkedHashSet<>();
         for (SongResponse song : recommendations) {
-            playlistSongRepository.save(new PlaylistSong(playlist, songService.getEntity(song.id())));
+            if (addedSongIds.add(song.id())) {
+                playlistSongRepository.save(new PlaylistSong(playlist, songService.getEntity(song.id())));
+            }
         }
 
         return playlistService.get(playlist.getId());

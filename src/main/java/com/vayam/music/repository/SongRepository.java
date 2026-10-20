@@ -11,8 +11,13 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     List<Song> findByVibeContainingIgnoreCase(String vibe);
     List<Song> findByGenreIgnoreCase(String genre);
     List<Song> findByGenreContainingIgnoreCase(String genre);
+    List<Song> findByEnergyIgnoreCase(String energy);
+    List<Song> findByEnergyContainingIgnoreCase(String energy);
     List<Song> findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCase(String title, String artist);
     List<Song> findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCase(
             String title, String artist, String genre, String mood, String vibe
+    );
+    List<Song> findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCaseOrEnergyContainingIgnoreCase(
+            String title, String artist, String genre, String mood, String vibe, String energy
     );
 }

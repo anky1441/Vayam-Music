@@ -11,6 +11,7 @@ import com.vayam.music.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -35,12 +36,17 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     @Override
+    @Transactional
     public void run(String... args) {
-        // Seed users if empty
+        // Seed users if missing
         User demoUser = userRepository.findByEmailIgnoreCase("demo@example.com").orElse(null);
         if (demoUser == null) {
             demoUser = userRepository.save(new User("Demo User", "demo@example.com", passwordEncoder.encode("password123")));
+        }
+        if (!userRepository.existsByEmailIgnoreCase("alice@example.com")) {
             userRepository.save(new User("Alice Smith", "alice@example.com", passwordEncoder.encode("password123")));
+        }
+        if (!userRepository.existsByEmailIgnoreCase("bob@example.com")) {
             userRepository.save(new User("Bob Jones", "bob@example.com", passwordEncoder.encode("password123")));
         }
 
@@ -78,16 +84,19 @@ public class DataInitializer implements CommandLineRunner {
                             "https://actions.google.com/sounds/v1/transportation/subway_train.ogg",
                             "https://images.unsplash.com/photo-1464375117522-1311d6a5b81f?w=500")
             );
-            List<Song> savedSongs = songRepository.saveAll(songs);
+            songRepository.saveAll(songs);
+        }
 
-            // Create initial playlist for demoUser
-            if (playlistRepository.findByOwnerId(demoUser.getId()).isEmpty()) {
+        // Create initial playlist for demoUser if they have none
+        if (demoUser != null && playlistRepository.findByOwnerId(demoUser.getId()).isEmpty()) {
+            List<Song> currentSongs = songRepository.findAll();
+            if (currentSongs.size() >= 3) {
                 Playlist demoPlaylist = playlistRepository.save(
                         new Playlist("Chill & Focus Hits", "Hand-picked relaxing tunes for work and study", demoUser)
                 );
-                playlistSongRepository.save(new PlaylistSong(demoPlaylist, savedSongs.get(1)));
-                playlistSongRepository.save(new PlaylistSong(demoPlaylist, savedSongs.get(2)));
-                playlistSongRepository.save(new PlaylistSong(demoPlaylist, savedSongs.get(7)));
+                playlistSongRepository.save(new PlaylistSong(demoPlaylist, currentSongs.get(1)));
+                playlistSongRepository.save(new PlaylistSong(demoPlaylist, currentSongs.get(2)));
+                playlistSongRepository.save(new PlaylistSong(demoPlaylist, currentSongs.get(Math.min(7, currentSongs.size() - 1))));
             }
         }
     }

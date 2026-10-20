@@ -1,12 +1,12 @@
 package com.vayam.music.controller;
 
 import com.vayam.music.dto.SongResponse;
+import com.vayam.music.repository.UserRepository;
+import com.vayam.music.security.SecurityUtils;
 import com.vayam.music.service.LikeService;
 import com.vayam.music.service.SongService;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -16,15 +16,20 @@ import java.util.Map;
 public class SongController {
     private final SongService songService;
     private final LikeService likeService;
+    private final UserRepository userRepository;
 
-    public SongController(SongService songService, LikeService likeService) {
+    public SongController(SongService songService, LikeService likeService, UserRepository userRepository) {
         this.songService = songService;
         this.likeService = likeService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
-    public List<SongResponse> all(@RequestParam(required = false) String search) {
-        return search == null || search.isBlank() ? songService.all() : songService.search(search);
+    public List<SongResponse> all(@RequestParam(required = false) String search,
+                                  @RequestParam(required = false) String q,
+                                  @RequestParam(required = false) String query) {
+        String term = search != null ? search : (q != null ? q : query);
+        return term == null || term.isBlank() ? songService.all() : songService.search(term);
     }
 
     @GetMapping("/liked")
@@ -47,6 +52,11 @@ public class SongController {
         return songService.byGenre(genre);
     }
 
+    @GetMapping("/energy/{energy}")
+    public List<SongResponse> energy(@PathVariable String energy) {
+        return songService.byEnergy(energy);
+    }
+
     @GetMapping("/{id}")
     public SongResponse get(@PathVariable Long id) {
         return songService.get(id);
@@ -66,14 +76,15 @@ public class SongController {
 
     @GetMapping("/{songId}/is-liked")
     public Map<String, Object> isLiked(@PathVariable Long songId, Authentication authentication) {
-        boolean liked = likeService.isLiked(userId(authentication), songId);
+        Long userId = SecurityUtils.getUserIdOrNull(authentication, userRepository);
+        if (userId == null) {
+            return Map.of("songId", songId, "liked", false);
+        }
+        boolean liked = likeService.isLiked(userId, songId);
         return Map.of("songId", songId, "liked", liked);
     }
 
     private Long userId(Authentication authentication) {
-        if (authentication == null || authentication.getDetails() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
-        }
-        return (Long) authentication.getDetails();
+        return SecurityUtils.getUserId(authentication, userRepository);
     }
 }

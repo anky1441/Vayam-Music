@@ -5,13 +5,13 @@ import com.vayam.music.dto.SongResponse;
 import com.vayam.music.model.Song;
 import com.vayam.music.repository.SongRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@Transactional(readOnly = true)
 public class RecommendationService {
     private final SongRepository songRepository;
 
@@ -68,10 +68,14 @@ public class RecommendationService {
         // Score based on mood
         if (!mood.isBlank()) {
             String sMood = song.getMood() == null ? "" : song.getMood().toLowerCase();
+            String sVibe = song.getVibe() == null ? "" : song.getVibe().toLowerCase();
+            String sGenre = song.getGenre() == null ? "" : song.getGenre().toLowerCase();
             if (sMood.equalsIgnoreCase(mood)) {
                 score += 6;
             } else if (sMood.contains(mood) || mood.contains(sMood)) {
                 score += 3;
+            } else if (sVibe.contains(mood) || sGenre.contains(mood)) {
+                score += 2;
             }
         }
 
@@ -82,11 +86,13 @@ public class RecommendationService {
             String sGenre = song.getGenre() == null ? "" : song.getGenre().toLowerCase();
             String sMood = song.getMood() == null ? "" : song.getMood().toLowerCase();
             String sVibe = song.getVibe() == null ? "" : song.getVibe().toLowerCase();
+            String sEnergy = song.getEnergy() == null ? "" : song.getEnergy().toLowerCase();
 
             // Full prompt match
             if (sVibe.contains(prompt)) score += 6;
             if (sMood.contains(prompt)) score += 5;
             if (sGenre.contains(prompt)) score += 4;
+            if (sEnergy.contains(prompt)) score += 4;
             if (sTitle.contains(prompt)) score += 4;
             if (sArtist.contains(prompt)) score += 4;
 
@@ -97,6 +103,7 @@ public class RecommendationService {
                     if (sVibe.contains(token)) score += 3;
                     if (sMood.contains(token)) score += 3;
                     if (sGenre.contains(token)) score += 2;
+                    if (sEnergy.contains(token)) score += 2;
                     if (sArtist.contains(token)) score += 2;
                     if (sTitle.contains(token)) score += 2;
                 }
@@ -116,6 +123,9 @@ public class RecommendationService {
             }
             if (referenceSong.getVibe() != null && referenceSong.getVibe().equalsIgnoreCase(song.getVibe())) {
                 score += 3;
+            }
+            if (referenceSong.getEnergy() != null && referenceSong.getEnergy().equalsIgnoreCase(song.getEnergy())) {
+                score += 2;
             }
         }
 

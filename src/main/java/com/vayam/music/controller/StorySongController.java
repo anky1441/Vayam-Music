@@ -25,8 +25,18 @@ public class StorySongController {
         return storySongService.matchVibe(vibe);
     }
 
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public List<SongResponse> matchDirectJson(@Valid @RequestBody StorySongRequest request) {
+        return storySongService.matchVibe(request.vibe());
+    }
+
     @PostMapping(value = "/json", consumes = MediaType.APPLICATION_JSON_VALUE)
     public List<SongResponse> matchJson(@Valid @RequestBody StorySongRequest request) {
         return storySongService.matchVibe(request.vibe());
+    }
+
+    @GetMapping
+    public List<SongResponse> matchGet(@RequestParam(value = "vibe", required = false) String vibe) {
+        return storySongService.matchVibe(vibe);
     }
 }

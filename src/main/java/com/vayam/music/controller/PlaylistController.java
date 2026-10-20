@@ -2,12 +2,12 @@ package com.vayam.music.controller;
 
 import com.vayam.music.dto.CreatePlaylistRequest;
 import com.vayam.music.dto.PlaylistResponse;
+import com.vayam.music.repository.UserRepository;
+import com.vayam.music.security.SecurityUtils;
 import com.vayam.music.service.PlaylistService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -16,8 +16,12 @@ import java.util.Map;
 @RequestMapping("/api/playlists")
 public class PlaylistController {
     private final PlaylistService playlistService;
+    private final UserRepository userRepository;
 
-    public PlaylistController(PlaylistService playlistService) { this.playlistService = playlistService; }
+    public PlaylistController(PlaylistService playlistService, UserRepository userRepository) {
+        this.playlistService = playlistService;
+        this.userRepository = userRepository;
+    }
 
     @PostMapping
     public PlaylistResponse create(@Valid @RequestBody CreatePlaylistRequest request, Authentication auth) {
@@ -53,9 +57,6 @@ public class PlaylistController {
     }
 
     private Long userId(Authentication authentication) {
-        if (authentication == null || authentication.getDetails() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
-        }
-        return (Long) authentication.getDetails();
+        return SecurityUtils.getUserId(authentication, userRepository);
     }
 }
