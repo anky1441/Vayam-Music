@@ -2,17 +2,22 @@ package com.vayam.music.service;
 
 import com.vayam.music.dto.AddMemberRequest;
 import com.vayam.music.dto.PlaylistResponse;
+import com.vayam.music.dto.UserResponse;
 import com.vayam.music.model.Playlist;
 import com.vayam.music.model.PlaylistMember;
 import com.vayam.music.model.PlaylistSong;
 import com.vayam.music.repository.PlaylistMemberRepository;
 import com.vayam.music.repository.PlaylistSongRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 @Service
+@Transactional
 public class CollaborativePlaylistService {
     private final PlaylistMemberRepository memberRepository;
     private final PlaylistSongRepository playlistSongRepository;
@@ -31,9 +36,9 @@ public class CollaborativePlaylistService {
         this.songService = songService;
     }
 
-    public void addMember(Long ownerId, Long playlistId, AddMemberRequest request) {
+    public void addMember(Long requesterId, Long playlistId, AddMemberRequest request) {
         Playlist playlist = playlistService.getEntity(playlistId);
-        checkOwner(ownerId, playlist);
+        checkOwner(requesterId, playlist);
 
         if (playlist.getOwner().getId().equals(request.userId())) return;
         if (memberRepository.findByPlaylistIdAndUserId(playlistId, request.userId()).isEmpty()) {
@@ -41,10 +46,28 @@ public class CollaborativePlaylistService {
         }
     }
 
-    public void removeMember(Long ownerId, Long playlistId, Long userId) {
+    public void removeMember(Long requesterId, Long playlistId, Long targetUserId) {
         Playlist playlist = playlistService.getEntity(playlistId);
-        checkOwner(ownerId, playlist);
-        memberRepository.findByPlaylistIdAndUserId(playlistId, userId).ifPresent(memberRepository::delete);
+        if (!playlist.getOwner().getId().equals(requesterId) && !requesterId.equals(targetUserId)) {
+            throw new ResponseStatusException(FORBIDDEN, "Only the owner or the member themselves can perform this action");
+        }
+        memberRepository.findByPlaylistIdAndUserId(playlistId, targetUserId).ifPresent(memberRepository::delete);
+    }
+
+    public List<UserResponse> getMembers(Long requesterId, Long playlistId) {
+        if (!canEdit(requesterId, playlistId)) {
+            throw new ResponseStatusException(FORBIDDEN, "You do not have access to this shared playlist");
+        }
+        return memberRepository.findByPlaylistId(playlistId).stream()
+                .map(m -> UserResponse.from(m.getUser()))
+                .toList();
+    }
+
+    public List<PlaylistResponse> getSharedWithMe(Long userId) {
+        List<PlaylistMember> memberships = memberRepository.findByUserId(userId);
+        return memberships.stream()
+                .map(m -> playlistService.toResponse(m.getPlaylist()))
+                .toList();
     }
 
     public void addSong(Long userId, Long playlistId, Long songId) {

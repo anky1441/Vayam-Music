@@ -4,10 +4,12 @@ import com.vayam.music.dto.SongResponse;
 import com.vayam.music.model.Like;
 import com.vayam.music.repository.LikeRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class LikeService {
     private final LikeRepository likeRepository;
     private final UserService userService;
@@ -27,6 +29,10 @@ public class LikeService {
 
     public void unlike(Long userId, Long songId) {
         likeRepository.findByUserIdAndSongId(userId, songId).ifPresent(likeRepository::delete);
+    }
+
+    public boolean isLiked(Long userId, Long songId) {
+        return likeRepository.findByUserIdAndSongId(userId, songId).isPresent();
     }
 
     public List<SongResponse> myLikes(Long userId) {

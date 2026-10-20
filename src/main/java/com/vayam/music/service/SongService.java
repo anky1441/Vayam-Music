@@ -24,24 +24,49 @@ public class SongService {
 
     public SongResponse get(Long id) {
         return SongResponse.from(songRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Song not found")));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Song not found with id " + id)));
     }
 
     public List<SongResponse> byMood(String mood) {
-        return songRepository.findByMoodIgnoreCase(mood).stream().map(SongResponse::from).toList();
+        if (mood == null || mood.isBlank()) return List.of();
+        String m = mood.trim();
+        List<Song> songs = songRepository.findByMoodIgnoreCase(m);
+        if (songs.isEmpty()) {
+            songs = songRepository.findByMoodContainingIgnoreCase(m);
+        }
+        return songs.stream().map(SongResponse::from).toList();
     }
 
     public List<SongResponse> byVibe(String vibe) {
-        return songRepository.findByVibeIgnoreCase(vibe).stream().map(SongResponse::from).toList();
+        if (vibe == null || vibe.isBlank()) return List.of();
+        String v = vibe.trim();
+        List<Song> songs = songRepository.findByVibeIgnoreCase(v);
+        if (songs.isEmpty()) {
+            songs = songRepository.findByVibeContainingIgnoreCase(v);
+        }
+        return songs.stream().map(SongResponse::from).toList();
+    }
+
+    public List<SongResponse> byGenre(String genre) {
+        if (genre == null || genre.isBlank()) return List.of();
+        String g = genre.trim();
+        List<Song> songs = songRepository.findByGenreIgnoreCase(g);
+        if (songs.isEmpty()) {
+            songs = songRepository.findByGenreContainingIgnoreCase(g);
+        }
+        return songs.stream().map(SongResponse::from).toList();
     }
 
     public List<SongResponse> search(String q) {
-        return songRepository.findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCase(q, q)
-                .stream().map(SongResponse::from).toList();
+        if (q == null || q.isBlank()) return all();
+        String query = q.trim();
+        return songRepository.findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCase(
+                query, query, query, query, query
+        ).stream().map(SongResponse::from).toList();
     }
 
     public Song getEntity(Long id) {
         return songRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Song not found"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Song not found with id " + id));
     }
 }

@@ -32,21 +32,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
-            try {
-                Claims claims = jwtService.parse(header.substring(7));
-                String email = claims.getSubject();
-                User user = userRepository.findByEmail(email).orElse(null);
+            String token = header.substring(7).trim();
+            if (!token.isBlank()) {
+                try {
+                    Claims claims = jwtService.parse(token);
+                    String email = claims.getSubject();
+                    if (email != null && !email.isBlank()) {
+                        User user = userRepository.findByEmail(email.toLowerCase()).orElse(null);
 
-                if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            user.getEmail(), null,
-                            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-                    auth.setDetails(user.getId());
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                        if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                            var auth = new UsernamePasswordAuthenticationToken(
+                                    user.getEmail(), null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                            );
+                            auth.setDetails(user.getId());
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Invalid/expired token: request remains unauthenticated.
                 }
-            } catch (Exception ignored) {
-                // Invalid/expired token: request remains unauthenticated.
             }
         }
 

@@ -4,6 +4,7 @@ import com.vayam.music.dto.SongResponse;
 import com.vayam.music.dto.StorySongRequest;
 import com.vayam.music.service.StorySongService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,15 +19,13 @@ public class StorySongController {
         this.storySongService = storySongService;
     }
 
-    @PostMapping(consumes = "multipart/form-data")
-    public List<SongResponse> match(@RequestPart("vibe") String vibe,
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE})
+    public List<SongResponse> match(@RequestParam("vibe") String vibe,
                                     @RequestPart(value = "photo", required = false) MultipartFile photo) {
-        // First version: the selected vibe drives matching. The photo is accepted for the UI flow
-        // but is not permanently stored; image understanding can be connected later by the ML team.
         return storySongService.matchVibe(vibe);
     }
 
-    @PostMapping("/json")
+    @PostMapping(value = "/json", consumes = MediaType.APPLICATION_JSON_VALUE)
     public List<SongResponse> matchJson(@Valid @RequestBody StorySongRequest request) {
         return storySongService.matchVibe(request.vibe());
     }

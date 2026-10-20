@@ -26,17 +26,19 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        String email = request.email().trim().toLowerCase();
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new ResponseStatusException(CONFLICT, "Email already registered");
         }
-        User user = new User(request.name(), request.email().toLowerCase(), passwordEncoder.encode(request.password()));
+        User user = new User(request.name().trim(), email, passwordEncoder.encode(request.password()));
         user = userRepository.save(user);
         String token = jwtService.generateToken(user.getId(), user.getEmail());
         return new AuthResponse(token, user.getId(), user.getName(), user.getEmail());
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email().toLowerCase())
+        String email = request.email().trim().toLowerCase();
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid email or password"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid email or password");
