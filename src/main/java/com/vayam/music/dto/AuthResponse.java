@@ -1,6 +1,5 @@
 package com.vayam.music.dto;
 
-<<<<<<< HEAD
 public record AuthResponse(
         String token,
         Long userId,
@@ -17,7 +16,4 @@ public record AuthResponse(
         this(token, userId, name, email, avatarUrl, "GOOGLE");
     }
 }
-=======
-public record AuthResponse(String token, Long userId, String name, String email) {}
->>>>>>> aa469ed8f3ae6a2a739ff58d10e3bf3b74f1cb83
  
