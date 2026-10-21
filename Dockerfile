@@ -18,7 +18,7 @@ RUN mvn clean package -DskipTests -B
 FROM eclipse-temurin:17-jre-alpine AS runner
 WORKDIR /app
 
-# Install curl/wget for healthcheck
+# Install wget for container healthcheck
 RUN apk add --no-cache wget
 
 # Create a secure non-root user and group
@@ -28,14 +28,14 @@ USER vayam:vayam
 # Copy executable jar from builder stage
 COPY --from=builder --chown=vayam:vayam /app/target/*.jar app.jar
 
-# Configuration and JVM options optimized for containers
-ENV SERVER_PORT=8080 \
+# Container configuration: defaults to port 8080, automatically adapts to Render/cloud PORT
+ENV PORT=8080 \
     JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 
 # Health check to verify service availability
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:8080/api/health || exit 1
+  CMD wget -qO- http://localhost:${PORT:-8080}/api/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
