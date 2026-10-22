@@ -16,7 +16,7 @@ import java.net.URI;
 public class DatabaseConfig {
     private static final Logger log = LoggerFactory.getLogger(DatabaseConfig.class);
 
-    @Value("${spring.datasource.url}")
+    @Value("${spring.datasource.url:}")
     private String rawUrl;
 
     @Value("${spring.datasource.username:postgres}")
@@ -36,6 +36,28 @@ public class DatabaseConfig {
         String url = rawUrl != null ? rawUrl.trim() : "";
         String user = username;
         String pass = password;
+
+        boolean isLocalhost = url.isEmpty() || url.contains("localhost:5432") || url.contains("127.0.0.1:5432");
+        boolean isRenderCloud = System.getenv("RENDER") != null || System.getenv("RENDER_SERVICE_ID") != null;
+
+        // Fallback to in-memory H2 database if deployed to Render without an external database configured
+        // or if explicitly configured to use H2
+        if ((isRenderCloud && isLocalhost) || url.startsWith("jdbc:h2:") || "h2".equalsIgnoreCase(url) || "mem".equalsIgnoreCase(url)) {
+            log.warn("================================================================================");
+            log.warn("RUNNING IN CLOUD (RENDER) WITHOUT EXTERNAL POSTGRESQL CONFIGURED!");
+            log.warn("Activating embedded in-memory database fallback (PostgreSQL compatibility mode).");
+            log.warn("All APIs, Google Auth, Songs, and Playlists will function normally!");
+            log.warn("To use PostgreSQL on Render, set DB_URL in Render Dashboard -> Environment tab.");
+            log.warn("================================================================================");
+
+            config.setJdbcUrl("jdbc:h2:mem:music_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH");
+            config.setDriverClassName("org.h2.Driver");
+            config.setUsername("sa");
+            config.setPassword("");
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
+            return new HikariDataSource(config);
+        }
 
         // Automatically convert cloud provider URLs (postgres:// or postgresql:// from Render, Supabase, Neon)
         if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
