@@ -1,14 +1,67 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { isAuthenticated } from "../api/api";
+import { getCurrentUser } from "../api/musicApi";
+
 import "./Navbar.css";
 
-function Navbar({ onProfileClick }) {
+function ProfileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function Navbar({ onProfileClick, onHomeClick }) {
   const [search, setSearch] = useState("");
+  const [initial, setInitial] = useState("");
+  const navigate = useNavigate();
+  const loggedIn = isAuthenticated();
+
+  // Show the first letter of the user's name on the profile button.
+  useEffect(() => {
+    if (!loggedIn) return;
+    let active = true;
+
+    getCurrentUser()
+      .then((response) => {
+        const name = response.data?.name ?? response.data?.user?.name;
+        if (active && name) setInitial(name.trim().charAt(0).toUpperCase());
+      })
+      .catch(() => { });
+
+    return () => {
+      active = false;
+    };
+  }, [loggedIn]);
+
+  const goHome = (event) => {
+    event.preventDefault();
+    if (onHomeClick) onHomeClick();
+    navigate("/home");
+  };
+
+  const openProfile = () => {
+    if (onProfileClick) {
+      // Already on the Home page: open Profile in the right-side panel.
+      onProfileClick();
+    } else {
+      // Anywhere else: go to Home and open the Profile panel.
+      navigate("/home", { state: { view: "profile" } });
+    }
+  };
 
   return (
     <nav className="navbar">
-      <a href="/home" className="navbar-brand">
+      <a href="/home" className="navbar-brand" onClick={goHome}>
         <img
           src="/images/vayam-icon.png"
           alt="Vayam logo"
@@ -22,6 +75,7 @@ function Navbar({ onProfileClick }) {
         className="navbar-home"
         aria-label="Home"
         title="Home"
+        onClick={goHome}
       >
         <svg
           viewBox="0 0 24 24"
@@ -85,21 +139,29 @@ function Navbar({ onProfileClick }) {
         />
       </form>
 
-      {onProfileClick ? (
+      {loggedIn ? (
         <button
           type="button"
-          className="navbar-login"
-          onClick={onProfileClick}
+          className="navbar-profile"
+          onClick={openProfile}
+          aria-label="Open your profile"
+          title="Profile"
         >
-          Profile
+          {initial || <ProfileIcon />}
         </button>
       ) : (
-        <Link to="/login" className="navbar-login">
-          Login
-        </Link>
+        <div className="navbar-auth">
+          <Link to="/login" className="navbar-login">
+            Login
+          </Link>
+          <Link to="/register" className="navbar-signup">
+            Sign up
+          </Link>
+        </div>
       )}
     </nav>
   );
 }
+
 
 export default Navbar;
