@@ -323,3 +323,6 @@
     font-size: 1.4rem;
   }
 }
+.profile-playlist-card {
+  cursor: pointer;
+}

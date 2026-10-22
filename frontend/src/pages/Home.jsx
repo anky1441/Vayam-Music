@@ -90,11 +90,10 @@ function HomeDiscovery({
 
                                 <button
                                     type="button"
-                                    className={`dashboard-heart ${
-                                        likedSongs.includes(song.id)
+                                    className={`dashboard-heart ${likedSongs.includes(song.id)
                                             ? "liked"
                                             : ""
-                                    }`}
+                                        }`}
                                     onClick={() => onLike(song.id)}
                                     aria-label={`Like ${song.title}`}
                                 >
@@ -217,9 +216,9 @@ function readLocalStorage(key, fallback) {
 }
 
 function Home() {
-const location = useLocation();
+    const location = useLocation();
 
-    
+
     const [activeView, setActiveView] = useState(
         location.state?.view === "profile" ? "profile" : "home"
     );
@@ -327,7 +326,7 @@ const location = useLocation();
 
     return (
         <div className="music-home">
-          <Navbar
+            <Navbar
                 onProfileClick={() => openView("profile")}
                 onHomeClick={() => openView("home")}
             />
@@ -343,9 +342,8 @@ const location = useLocation();
 
                     <button
                         type="button"
-                        className={`library-item ${
-                            activeView === "liked" ? "active" : ""
-                        }`}
+                        className={`library-item ${activeView === "liked" ? "active" : ""
+                            }`}
                         onClick={() => openView("liked")}
                     >
                         <span>♡</span> Liked Songs
@@ -353,12 +351,11 @@ const location = useLocation();
 
                     <button
                         type="button"
-                        className={`library-item ${
-                            activeView === "playlists" ||
-                            activeView === "playlist-details"
+                        className={`library-item ${activeView === "playlists" ||
+                                activeView === "playlist-details"
                                 ? "active"
                                 : ""
-                        }`}
+                            }`}
                         onClick={() => openView("playlists")}
                     >
                         <span>☷</span> My Playlists
@@ -430,7 +427,13 @@ const location = useLocation();
                         )}
 
                     {activeView === "profile" && (
-                        <Profile playlists={playlists} />
+                        <Profile
+                            playlists={playlists}
+                            onSelectPlaylist={(id) => {
+                                setSelectedPlaylistId(id);
+                                setActiveView("playlist-details");
+                            }}
+                        />
                     )}
 
                     <Footer showCTA={false} />

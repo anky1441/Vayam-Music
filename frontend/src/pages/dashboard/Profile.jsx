@@ -6,7 +6,7 @@ import "./Profile.css";
 
 const PHOTO_KEY = "vayam-profile-photo";
 
-function Profile({ playlists = [] }) {
+function Profile({ playlists = [], onSelectPlaylist }) {
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
@@ -247,7 +247,19 @@ function Profile({ playlists = [] }) {
         ) : (
           <div className="profile-playlist-grid">
             {playlists.map((playlist, index) => (
-              <article className="profile-playlist-card" key={playlist.id}>
+              <article
+                className="profile-playlist-card"
+                key={playlist.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectPlaylist?.(playlist.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectPlaylist?.(playlist.id);
+                  }
+                }}
+              >
                 <div className={`profile-playlist-art profile-art-${index % 4}`}>
                   <span>♫</span>
                 </div>
