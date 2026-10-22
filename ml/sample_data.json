@@ -1,0 +1,1002 @@
+[
+  {
+    "track_name": "Balanço por Você - Ao Vivo",
+    "artists": "Bom Gosto;Pericles",
+    "album_name": "Balanço por Você (Ao Vivo)",
+    "track_genre": "pagode",
+    "danceability": 0.427,
+    "energy": 0.703,
+    "valence": 0.7,
+    "tempo": 84.44
+  },
+  {
+    "track_name": "Eu Me Apaixonei pela Pessoa Errada",
+    "artists": "Akatu",
+    "album_name": "Luau do Akatu",
+    "track_genre": "samba",
+    "danceability": 0.652,
+    "energy": 0.701,
+    "valence": 0.928,
+    "tempo": 158.124
+  },
+  {
+    "track_name": "The Scope Of Obsession",
+    "artists": "Carnifex",
+    "album_name": "Hell Chose Me (Bonus Track Version)",
+    "track_genre": "black-metal",
+    "danceability": 0.573,
+    "energy": 0.976,
+    "valence": 0.315,
+    "tempo": 114.02
+  },
+  {
+    "track_name": "Migration",
+    "artists": "Ann Sweeten",
+    "album_name": "Where Butterflies Dance",
+    "track_genre": "new-age",
+    "danceability": 0.281,
+    "energy": 0.141,
+    "valence": 0.206,
+    "tempo": 135.356
+  },
+  {
+    "track_name": "ヘタレたちよ",
+    "artists": "STU48",
+    "album_name": "ヘタレたちよ Special Edition",
+    "track_genre": "j-idol",
+    "danceability": 0.403,
+    "energy": 0.921,
+    "valence": 0.574,
+    "tempo": 177.824
+  },
+  {
+    "track_name": "SHE Like IT",
+    "artists": "Eshconinco",
+    "album_name": "Dream Life",
+    "track_genre": "dancehall",
+    "danceability": 0.757,
+    "energy": 0.819,
+    "valence": 0.818,
+    "tempo": 189.978
+  },
+  {
+    "track_name": "Running",
+    "artists": "Martin Jensen;Cheat Codes;Theresa Rex",
+    "album_name": "Running",
+    "track_genre": "electronic",
+    "danceability": 0.606,
+    "energy": 0.853,
+    "valence": 0.333,
+    "tempo": 122.001
+  },
+  {
+    "track_name": "Somebody Out There",
+    "artists": "A Rocket To The Moon",
+    "album_name": "Wild & Free (Deluxe)",
+    "track_genre": "punk-rock",
+    "danceability": 0.405,
+    "energy": 0.409,
+    "valence": 0.233,
+    "tempo": 119.954
+  },
+  {
+    "track_name": "Die tijd van het jaar",
+    "artists": "Noortje Herlaar;Willemijn Verkaik;Carlo Boszhard;Cast - Olaf's Frozen Avontuur",
+    "album_name": "Olaf's Frozen Avontuur (Originele Nederlandstalige Soundtrack)",
+    "track_genre": "disney",
+    "danceability": 0.615,
+    "energy": 0.522,
+    "valence": 0.733,
+    "tempo": 132.927
+  },
+  {
+    "track_name": "The Sound Of Eight Hooves",
+    "artists": "Amon Amarth",
+    "album_name": "The Crusher",
+    "track_genre": "death-metal",
+    "danceability": 0.322,
+    "energy": 0.968,
+    "valence": 0.0366,
+    "tempo": 130.273
+  },
+  {
+    "track_name": "Ravin",
+    "artists": "Popcaan",
+    "album_name": "Empire Summer",
+    "track_genre": "j-dance",
+    "danceability": 0.735,
+    "energy": 0.56,
+    "valence": 0.751,
+    "tempo": 99.495
+  },
+  {
+    "track_name": "Speakerbox (feat. Lafa Taylor)",
+    "artists": "Bassnectar;Lafa Taylor",
+    "album_name": "Into the Sun",
+    "track_genre": "electronic",
+    "danceability": 0.507,
+    "energy": 0.934,
+    "valence": 0.471,
+    "tempo": 175.954
+  },
+  {
+    "track_name": "2002 - Acoustic",
+    "artists": "Amber Leigh Irish",
+    "album_name": "Simply Acoustic",
+    "track_genre": "acoustic",
+    "danceability": 0.589,
+    "energy": 0.296,
+    "valence": 0.611,
+    "tempo": 165.799
+  },
+  {
+    "track_name": "The Middle",
+    "artists": "Jimmy Eat World",
+    "album_name": "Mirando las nubes",
+    "track_genre": "emo",
+    "danceability": 0.644,
+    "energy": 0.848,
+    "valence": 0.928,
+    "tempo": 162.151
+  },
+  {
+    "track_name": "Parvati Valley",
+    "artists": "Blastoyz",
+    "album_name": "Parvati Valley",
+    "track_genre": "trance",
+    "danceability": 0.577,
+    "energy": 0.941,
+    "valence": 0.517,
+    "tempo": 143.016
+  },
+  {
+    "track_name": "Kein Bock",
+    "artists": "SDP;FiNCH",
+    "album_name": "Ballermann Hits Party 2023",
+    "track_genre": "reggae",
+    "danceability": 0.882,
+    "energy": 0.651,
+    "valence": 0.651,
+    "tempo": 134.065
+  },
+  {
+    "track_name": "Nebaví",
+    "artists": "Schyzo",
+    "album_name": "V. Patro",
+    "track_genre": "emo",
+    "danceability": 0.865,
+    "energy": 0.497,
+    "valence": 0.547,
+    "tempo": 87.031
+  },
+  {
+    "track_name": "Drobnostka - z filmu \"Vaiana - Skarb Oceanu\"",
+    "artists": "Igor Kwiatkowski",
+    "album_name": "Disney Najwieksze Przeboje (4 Vol.)",
+    "track_genre": "disney",
+    "danceability": 0.787,
+    "energy": 0.703,
+    "valence": 0.564,
+    "tempo": 135.193
+  },
+  {
+    "track_name": "I Just Called",
+    "artists": "NEIKED;Anne-Marie;Latto",
+    "album_name": "Your Perfect Soundtrack",
+    "track_genre": "house",
+    "danceability": 0.626,
+    "energy": 0.849,
+    "valence": 0.898,
+    "tempo": 138.997
+  },
+  {
+    "track_name": "Je Kawta Din Reprise",
+    "artists": "Anupam Roy;Iman Chakraborty",
+    "album_name": "Dwitiyo Purush (Original Motion Picture Soundtrack",
+    "track_genre": "indie-pop",
+    "danceability": 0.49,
+    "energy": 0.19,
+    "valence": 0.256,
+    "tempo": 105.926
+  },
+  {
+    "track_name": "Strangers in the Night",
+    "artists": "De-Phazz",
+    "album_name": "Strangers in Dub (Bert Kaempfert meets De-Phazz)",
+    "track_genre": "trip-hop",
+    "danceability": 0.582,
+    "energy": 0.7,
+    "valence": 0.679,
+    "tempo": 148.003
+  },
+  {
+    "track_name": "In The Waiting Line",
+    "artists": "Zero 7;Sophie Barker",
+    "album_name": "Simple Things",
+    "track_genre": "electronic",
+    "danceability": 0.561,
+    "energy": 0.33,
+    "valence": 0.378,
+    "tempo": 79.01
+  },
+  {
+    "track_name": "Said Sum",
+    "artists": "Moneybagg Yo",
+    "album_name": "GANG GANG - HIP HOP & RAP",
+    "track_genre": "hip-hop",
+    "danceability": 0.929,
+    "energy": 0.667,
+    "valence": 0.274,
+    "tempo": 126.998
+  },
+  {
+    "track_name": "Angkuh",
+    "artists": "Burgerkill",
+    "album_name": "Killchestra",
+    "track_genre": "death-metal",
+    "danceability": 0.515,
+    "energy": 0.86,
+    "valence": 0.343,
+    "tempo": 135.997
+  },
+  {
+    "track_name": "Love Is Strong",
+    "artists": "The Green",
+    "album_name": "Ways & Means",
+    "track_genre": "j-rock",
+    "danceability": 0.827,
+    "energy": 0.559,
+    "valence": 0.751,
+    "tempo": 143.982
+  },
+  {
+    "track_name": "Letter to Jarad",
+    "artists": "LRN Slime;Shiloh Dynasty",
+    "album_name": "why am i crying",
+    "track_genre": "sad",
+    "danceability": 0.873,
+    "energy": 0.0903,
+    "valence": 0.785,
+    "tempo": 121.981
+  },
+  {
+    "track_name": "Luizenlied (Hallo Allemaal) (Radio Version)",
+    "artists": "DJ Maurice;Jelle B.",
+    "album_name": "Luizenlied (Hallo Allemaal)",
+    "track_genre": "hardstyle",
+    "danceability": 0.569,
+    "energy": 0.918,
+    "valence": 0.562,
+    "tempo": 149.867
+  },
+  {
+    "track_name": "コイワズライ",
+    "artists": "Aimer",
+    "album_name": "Sun Dance",
+    "track_genre": "anime",
+    "danceability": 0.675,
+    "energy": 0.5,
+    "valence": 0.773,
+    "tempo": 93.917
+  },
+  {
+    "track_name": "I Don't Think I Love You",
+    "artists": "Hoobastank",
+    "album_name": "For(N)ever",
+    "track_genre": "grunge",
+    "danceability": 0.528,
+    "energy": 0.91,
+    "valence": 0.555,
+    "tempo": 123.976
+  },
+  {
+    "track_name": "Hear My Train a Comin'",
+    "artists": "Jimi Hendrix",
+    "album_name": "People, Hell & Angels",
+    "track_genre": "psych-rock",
+    "danceability": 0.371,
+    "energy": 0.634,
+    "valence": 0.568,
+    "tempo": 84.977
+  },
+  {
+    "track_name": "Someday At Christmas",
+    "artists": "Stevie Wonder",
+    "album_name": "Best Christmas Playlist Ever 2022",
+    "track_genre": "funk",
+    "danceability": 0.325,
+    "energy": 0.536,
+    "valence": 0.218,
+    "tempo": 101.483
+  },
+  {
+    "track_name": "Love",
+    "artists": "Screeching Weasel",
+    "album_name": "Boogadaboogadaboogada! (2020 Remaster)",
+    "track_genre": "power-pop",
+    "danceability": 0.287,
+    "energy": 0.933,
+    "valence": 0.853,
+    "tempo": 137.344
+  },
+  {
+    "track_name": "Can't Fake The Feeling",
+    "artists": "Joe Smooth",
+    "album_name": "Promised Land",
+    "track_genre": "chicago-house",
+    "danceability": 0.718,
+    "energy": 0.915,
+    "valence": 0.365,
+    "tempo": 116.928
+  },
+  {
+    "track_name": "Santa Lucía",
+    "artists": "La Rata Bluesera;Federico Dannemann;Gonzalo Araya",
+    "album_name": "Valdivia",
+    "track_genre": "blues",
+    "danceability": 0.446,
+    "energy": 0.651,
+    "valence": 0.597,
+    "tempo": 123.092
+  },
+  {
+    "track_name": "心 - Live",
+    "artists": "my little airport",
+    "album_name": "I ALSO DON'T KNOW (Live)",
+    "track_genre": "cantopop",
+    "danceability": 0.447,
+    "energy": 0.351,
+    "valence": 0.207,
+    "tempo": 120.333
+  },
+  {
+    "track_name": "Nem Dormindo Consigo Te Esquecer / Preciso Ser Amado / Fica Comigo - Ao Vivo",
+    "artists": "Clayton & Romário",
+    "album_name": "No Churrasco (Ao Vivo)",
+    "track_genre": "sertanejo",
+    "danceability": 0.473,
+    "energy": 0.645,
+    "valence": 0.511,
+    "tempo": 159.672
+  },
+  {
+    "track_name": "We Control",
+    "artists": "Lilly Palmer",
+    "album_name": "We Control",
+    "track_genre": "techno",
+    "danceability": 0.707,
+    "energy": 0.815,
+    "valence": 0.148,
+    "tempo": 133.024
+  },
+  {
+    "track_name": "In Shrouds Decayed",
+    "artists": "Triptykon",
+    "album_name": "Eparistera Daimones",
+    "track_genre": "black-metal",
+    "danceability": 0.487,
+    "energy": 0.456,
+    "valence": 0.037,
+    "tempo": 118.035
+  },
+  {
+    "track_name": "M八七",
+    "artists": "Kenshi Yonezu",
+    "album_name": "M八七",
+    "track_genre": "anime",
+    "danceability": 0.633,
+    "energy": 0.719,
+    "valence": 0.334,
+    "tempo": 112.013
+  },
+  {
+    "track_name": "Pale Man in Black",
+    "artists": "The Coffinshakers",
+    "album_name": "Dark Wings Over the World",
+    "track_genre": "goth",
+    "danceability": 0.305,
+    "energy": 0.84,
+    "valence": 0.711,
+    "tempo": 150.859
+  },
+  {
+    "track_name": "Mbube",
+    "artists": "Lebo M.",
+    "album_name": "The Lion King (Original Motion Picture Soundtrack)",
+    "track_genre": "disney",
+    "danceability": 0.692,
+    "energy": 0.603,
+    "valence": 0.643,
+    "tempo": 138.065
+  },
+  {
+    "track_name": "サヨナラの意味",
+    "artists": "Nogizaka46",
+    "album_name": "生まれてから初めて見た夢 (Complete Edition)",
+    "track_genre": "j-idol",
+    "danceability": 0.51,
+    "energy": 0.756,
+    "valence": 0.573,
+    "tempo": 126.998
+  },
+  {
+    "track_name": "Kardeşin Duymaz",
+    "artists": "Zülfü Livaneli",
+    "album_name": "Bütüneserleri, Vol. 6 (Günlerimiz)",
+    "track_genre": "j-rock",
+    "danceability": 0.609,
+    "energy": 0.423,
+    "valence": 0.39,
+    "tempo": 135.601
+  },
+  {
+    "track_name": "Lighthouses - Ambient Version",
+    "artists": "Felix Werner",
+    "album_name": "Lighthouses (Ambient Version)",
+    "track_genre": "sleep",
+    "danceability": 0.208,
+    "energy": 0.0581,
+    "valence": 0.0394,
+    "tempo": 68.942
+  },
+  {
+    "track_name": "Dale Hasta Abajo",
+    "artists": "Chris Jedi;Joey Montana",
+    "album_name": "Hora del taco sin auto",
+    "track_genre": "reggae",
+    "danceability": 0.686,
+    "energy": 0.915,
+    "valence": 0.743,
+    "tempo": 100.003
+  },
+  {
+    "track_name": "Going Wild",
+    "artists": "Toini & The Tomcats",
+    "album_name": "Going Wild",
+    "track_genre": "rockabilly",
+    "danceability": 0.379,
+    "energy": 0.87,
+    "valence": 0.638,
+    "tempo": 183.782
+  },
+  {
+    "track_name": "Castle In The Snow",
+    "artists": "The Avener;Kadebostany",
+    "album_name": "The Wanderings Of The Avener",
+    "track_genre": "french",
+    "danceability": 0.664,
+    "energy": 0.807,
+    "valence": 0.641,
+    "tempo": 98.017
+  },
+  {
+    "track_name": "Heavy Metal Love",
+    "artists": "twocolors",
+    "album_name": "Ballermann Hits Party 2023",
+    "track_genre": "house",
+    "danceability": 0.768,
+    "energy": 0.767,
+    "valence": 0.457,
+    "tempo": 125.029
+  },
+  {
+    "track_name": "Preet",
+    "artists": "Jasleen Royal",
+    "album_name": "Khoobsurat",
+    "track_genre": "songwriter",
+    "danceability": 0.578,
+    "energy": 0.561,
+    "valence": 0.529,
+    "tempo": 167.887
+  },
+  {
+    "track_name": "Gori, gori, moja zvezda",
+    "artists": "Nikolay Erdenko",
+    "album_name": "Romansy Rossii, Chast’ 1",
+    "track_genre": "romance",
+    "danceability": 0.473,
+    "energy": 0.418,
+    "valence": 0.131,
+    "tempo": 129.559
+  },
+  {
+    "track_name": "秘密",
+    "artists": "sumika",
+    "album_name": "Chime",
+    "track_genre": "j-pop",
+    "danceability": 0.29,
+    "energy": 0.54,
+    "valence": 0.394,
+    "tempo": 82.08
+  },
+  {
+    "track_name": "La Llevo Al Cielo",
+    "artists": "Chris Jedi;Anuel AA;Chencho Corleone;Ñengo Flow",
+    "album_name": "Última Misión Reggaeton",
+    "track_genre": "latino",
+    "danceability": 0.795,
+    "energy": 0.845,
+    "valence": 0.769,
+    "tempo": 170.023
+  },
+  {
+    "track_name": "Flight",
+    "artists": "Otnicka;ONEIL",
+    "album_name": "Flight",
+    "track_genre": "electronic",
+    "danceability": 0.711,
+    "energy": 0.642,
+    "valence": 0.125,
+    "tempo": 100.011
+  },
+  {
+    "track_name": "Doomsday",
+    "artists": "Overseer",
+    "album_name": "Wreckage",
+    "track_genre": "breakbeat",
+    "danceability": 0.66,
+    "energy": 0.812,
+    "valence": 0.785,
+    "tempo": 155.01
+  },
+  {
+    "track_name": "Imagineering",
+    "artists": "Nightmares On Wax",
+    "album_name": "Imagineering",
+    "track_genre": "trip-hop",
+    "danceability": 0.619,
+    "energy": 0.184,
+    "valence": 0.389,
+    "tempo": 146.338
+  },
+  {
+    "track_name": "Love U Better",
+    "artists": "Ty Dolla $ign;Lil Wayne;The-Dream",
+    "album_name": "Rap Ice",
+    "track_genre": "dance",
+    "danceability": 0.627,
+    "energy": 0.562,
+    "valence": 0.389,
+    "tempo": 95.054
+  },
+  {
+    "track_name": "Adiós en Pompeya",
+    "artists": "Babasónicos",
+    "album_name": "Discutible",
+    "track_genre": "electronic",
+    "danceability": 0.435,
+    "energy": 0.636,
+    "valence": 0.392,
+    "tempo": 145.675
+  },
+  {
+    "track_name": "Om Numah Shivaya",
+    "artists": "Apache Indian",
+    "album_name": "Time For Change",
+    "track_genre": "dancehall",
+    "danceability": 0.757,
+    "energy": 0.723,
+    "valence": 0.399,
+    "tempo": 74.985
+  },
+  {
+    "track_name": "奇洛李維斯回信",
+    "artists": "Fiona Sit",
+    "album_name": "F",
+    "track_genre": "cantopop",
+    "danceability": 0.734,
+    "energy": 0.524,
+    "valence": 0.562,
+    "tempo": 118.012
+  },
+  {
+    "track_name": "One Little Christmas Tree",
+    "artists": "Stevie Wonder",
+    "album_name": "Rock Christmas 2022 - The Very Best Of",
+    "track_genre": "indie",
+    "danceability": 0.406,
+    "energy": 0.377,
+    "valence": 0.717,
+    "tempo": 92.23
+  },
+  {
+    "track_name": "Churchill Downs",
+    "artists": "Jack Harlow;Drake",
+    "album_name": "Tic Tac - Just Rap",
+    "track_genre": "hip-hop",
+    "danceability": 0.71,
+    "energy": 0.522,
+    "valence": 0.37,
+    "tempo": 96.448
+  },
+  {
+    "track_name": "Tinto Tintero",
+    "artists": "Up, Bustle & Out",
+    "album_name": "Mexican Sessions - Our Simple Sensational Sound",
+    "track_genre": "trip-hop",
+    "danceability": 0.903,
+    "energy": 0.77,
+    "valence": 0.831,
+    "tempo": 119.014
+  },
+  {
+    "track_name": "Na horda - Ao vivo",
+    "artists": "O Rappa",
+    "album_name": "O Rappa - Acústico Oficina Francisco Brennand (Deluxe) [Ao Vivo]",
+    "track_genre": "alt-rock",
+    "danceability": 0.581,
+    "energy": 0.857,
+    "valence": 0.697,
+    "tempo": 140.885
+  },
+  {
+    "track_name": "Kamini",
+    "artists": "K. S. Harisankar;Arun Muraleedharan",
+    "album_name": "Anugraheethan Antony",
+    "track_genre": "malay",
+    "danceability": 0.518,
+    "energy": 0.481,
+    "valence": 0.199,
+    "tempo": 100.068
+  },
+  {
+    "track_name": "なないろ☆ナミダ",
+    "artists": "Tomato N' Pine",
+    "album_name": "なないろ☆ナミダ",
+    "track_genre": "j-idol",
+    "danceability": 0.621,
+    "energy": 0.882,
+    "valence": 0.667,
+    "tempo": 127.047
+  },
+  {
+    "track_name": "Feel So Numb",
+    "artists": "Rob Zombie",
+    "album_name": "The Sinister Urge",
+    "track_genre": "industrial",
+    "danceability": 0.566,
+    "energy": 0.889,
+    "valence": 0.141,
+    "tempo": 127.045
+  },
+  {
+    "track_name": "I Saw Mommy Kissing Santa Claus",
+    "artists": "Frankie Valli & The Four Seasons",
+    "album_name": "Perfect Christmas Hits",
+    "track_genre": "r-n-b",
+    "danceability": 0.629,
+    "energy": 0.56,
+    "valence": 0.88,
+    "tempo": 118.895
+  },
+  {
+    "track_name": "Little Saint Nick - 1991 Remix",
+    "artists": "The Beach Boys",
+    "album_name": "Jingle Bell Rock 2022",
+    "track_genre": "rock",
+    "danceability": 0.602,
+    "energy": 0.553,
+    "valence": 0.971,
+    "tempo": 130.594
+  },
+  {
+    "track_name": "Canções De Rei",
+    "artists": "Max Viana",
+    "album_name": "No Calçadão",
+    "track_genre": "mpb",
+    "danceability": 0.572,
+    "energy": 0.223,
+    "valence": 0.377,
+    "tempo": 105.944
+  },
+  {
+    "track_name": "The Cheeki Breeki Song",
+    "artists": "Midnight Tyrannosaurus;Nimda",
+    "album_name": "Planet Doom",
+    "track_genre": "dubstep",
+    "danceability": 0.515,
+    "energy": 0.93,
+    "valence": 0.117,
+    "tempo": 139.449
+  },
+  {
+    "track_name": "If Drinkin' Don't Kill Me (Her Memory Will) - Live",
+    "artists": "George Jones",
+    "album_name": "Setlist: The Very Best of George Jones LIVE",
+    "track_genre": "honky-tonk",
+    "danceability": 0.441,
+    "energy": 0.392,
+    "valence": 0.361,
+    "tempo": 81.031
+  },
+  {
+    "track_name": "Schwer verliebter Hooligan",
+    "artists": "Broilers",
+    "album_name": "Puro Amor",
+    "track_genre": "german",
+    "danceability": 0.512,
+    "energy": 0.992,
+    "valence": 0.61,
+    "tempo": 169.964
+  },
+  {
+    "track_name": "Spellbound",
+    "artists": "Siouxsie and the Banshees",
+    "album_name": "Anthems for Witches 2022",
+    "track_genre": "alt-rock",
+    "danceability": 0.412,
+    "energy": 0.931,
+    "valence": 0.295,
+    "tempo": 148.813
+  },
+  {
+    "track_name": "Joy to the World (Joyful Joyful)",
+    "artists": "Phil Wickham",
+    "album_name": "Christmas: Acoustic Sessions",
+    "track_genre": "world-music",
+    "danceability": 0.48,
+    "energy": 0.15,
+    "valence": 0.285,
+    "tempo": 141.786
+  },
+  {
+    "track_name": "Partyfreak",
+    "artists": "PartyfrieX",
+    "album_name": "Partyfreak",
+    "track_genre": "happy",
+    "danceability": 0.732,
+    "energy": 0.919,
+    "valence": 0.889,
+    "tempo": 151.995
+  },
+  {
+    "track_name": "Diles",
+    "artists": "Bad Bunny;Ozuna;Farruko;Arcangel;Ñengo Flow;DJ Luian;Mambo Kingz",
+    "album_name": "Diles",
+    "track_genre": "latino",
+    "danceability": 0.813,
+    "energy": 0.56,
+    "valence": 0.287,
+    "tempo": 118.033
+  },
+  {
+    "track_name": "Wash",
+    "artists": "Timothy Infinite",
+    "album_name": "Wash",
+    "track_genre": "study",
+    "danceability": 0.751,
+    "energy": 0.615,
+    "valence": 0.535,
+    "tempo": 81.01
+  },
+  {
+    "track_name": "Y sólo se me ocurre amarte",
+    "artists": "Alejandro Sanz",
+    "album_name": "Grandes exitos 1991-2004 (Deluxe edition)",
+    "track_genre": "spanish",
+    "danceability": 0.677,
+    "energy": 0.843,
+    "valence": 0.768,
+    "tempo": 145.965
+  },
+  {
+    "track_name": "Easy Lover (feat. Big Sean)",
+    "artists": "Ellie Goulding;Big Sean",
+    "album_name": "Easy Lover (feat. Big Sean)",
+    "track_genre": "indie-pop",
+    "danceability": 0.675,
+    "energy": 0.817,
+    "valence": 0.446,
+    "tempo": 105.964
+  },
+  {
+    "track_name": "Into the Silence",
+    "artists": "Alphaxone",
+    "album_name": "Living in the Grayland",
+    "track_genre": "iranian",
+    "danceability": 0.253,
+    "energy": 0.181,
+    "valence": 0.0279,
+    "tempo": 111.957
+  },
+  {
+    "track_name": "Layla",
+    "artists": "DJ Robin;Schürze",
+    "album_name": "Ernte 2k23",
+    "track_genre": "party",
+    "danceability": 0.442,
+    "energy": 0.922,
+    "valence": 0.388,
+    "tempo": 140.082
+  },
+  {
+    "track_name": "Hello?",
+    "artists": "Clairo;Rejjie Snow",
+    "album_name": "diary 001",
+    "track_genre": "indie-pop",
+    "danceability": 0.839,
+    "energy": 0.473,
+    "valence": 0.0644,
+    "tempo": 98.732
+  },
+  {
+    "track_name": "Weak",
+    "artists": "Larissa Lambert",
+    "album_name": "Weak",
+    "track_genre": "chill",
+    "danceability": 0.617,
+    "energy": 0.451,
+    "valence": 0.487,
+    "tempo": 127.923
+  },
+  {
+    "track_name": "Когда я вернусь",
+    "artists": "Валерий Агафонов",
+    "album_name": "За кордоном – любовь",
+    "track_genre": "romance",
+    "danceability": 0.479,
+    "energy": 0.115,
+    "valence": 0.266,
+    "tempo": 64.222
+  },
+  {
+    "track_name": "Snowman",
+    "artists": "Sia",
+    "album_name": "Christmas Time",
+    "track_genre": "dance",
+    "danceability": 0.716,
+    "energy": 0.511,
+    "valence": 0.324,
+    "tempo": 104.964
+  },
+  {
+    "track_name": "Symphony Of Destruction",
+    "artists": "Megadeth",
+    "album_name": "Countdown To Extinction",
+    "track_genre": "hard-rock",
+    "danceability": 0.61,
+    "energy": 0.891,
+    "valence": 0.51,
+    "tempo": 139.903
+  },
+  {
+    "track_name": "Rockabye (feat. Sean Paul & Anne-Marie)",
+    "artists": "Clean Bandit;Sean Paul;Anne-Marie",
+    "album_name": "What Is Love? (Deluxe Edition)",
+    "track_genre": "edm",
+    "danceability": 0.717,
+    "energy": 0.73,
+    "valence": 0.792,
+    "tempo": 102.002
+  },
+  {
+    "track_name": "Dale Hasta Abajo",
+    "artists": "Chris Jedi;Joey Montana",
+    "album_name": "Hora del taco sin auto",
+    "track_genre": "latino",
+    "danceability": 0.686,
+    "energy": 0.915,
+    "valence": 0.743,
+    "tempo": 100.003
+  },
+  {
+    "track_name": "Everybody Dies in Their Nightmares",
+    "artists": "Danny G",
+    "album_name": "Everybody Dies in Their Nightmares",
+    "track_genre": "chill",
+    "danceability": 0.691,
+    "energy": 0.805,
+    "valence": 0.87,
+    "tempo": 129.508
+  },
+  {
+    "track_name": "Amor Covarde",
+    "artists": "Jorge & Mateus",
+    "album_name": "Amor Covarde",
+    "track_genre": "sertanejo",
+    "danceability": 0.567,
+    "energy": 0.474,
+    "valence": 0.415,
+    "tempo": 130.036
+  },
+  {
+    "track_name": "Muevan Las Industrias",
+    "artists": "Los Prisioneros",
+    "album_name": "Fiesta temática 80s",
+    "track_genre": "hardcore",
+    "danceability": 0.686,
+    "energy": 0.604,
+    "valence": 0.553,
+    "tempo": 152.474
+  },
+  {
+    "track_name": "Cartão Postal / Pensa - Ao Vivo",
+    "artists": "Mumuzinho",
+    "album_name": "Resenha Do Mumu (Ao Vivo)",
+    "track_genre": "pagode",
+    "danceability": 0.504,
+    "energy": 0.836,
+    "valence": 0.857,
+    "tempo": 171.944
+  },
+  {
+    "track_name": "Lucid Fairytale",
+    "artists": "Napalm Death",
+    "album_name": "The Earache Peel Sessions",
+    "track_genre": "grindcore",
+    "danceability": 0.23,
+    "energy": 0.988,
+    "valence": 0.451,
+    "tempo": 109.766
+  },
+  {
+    "track_name": "Without You",
+    "artists": "Refuzion",
+    "album_name": "Without You",
+    "track_genre": "hardstyle",
+    "danceability": 0.457,
+    "energy": 0.812,
+    "valence": 0.37,
+    "tempo": 149.949
+  },
+  {
+    "track_name": "Songs Without Words, Op. 62: No. 6, Allegretto grazioso in A Major \"Spring Song\"",
+    "artists": "Felix Mendelssohn;Henrik Måwe",
+    "album_name": "Refreshing Piano",
+    "track_genre": "german",
+    "danceability": 0.176,
+    "energy": 0.162,
+    "valence": 0.183,
+    "tempo": 58.879
+  },
+  {
+    "track_name": "Housedream",
+    "artists": "Ceephax Acid Crew",
+    "album_name": "Box Steady",
+    "track_genre": "idm",
+    "danceability": 0.782,
+    "energy": 0.86,
+    "valence": 0.697,
+    "tempo": 123.993
+  },
+  {
+    "track_name": "Neurachem",
+    "artists": "Circle of Dust",
+    "album_name": "FiXT Presents: Sinister Sounds",
+    "track_genre": "industrial",
+    "danceability": 0.468,
+    "energy": 0.979,
+    "valence": 0.529,
+    "tempo": 169.951
+  },
+  {
+    "track_name": "Vento No Litoral",
+    "artists": "Cássia Eller;Renato Russo",
+    "album_name": "Duetos",
+    "track_genre": "mpb",
+    "danceability": 0.411,
+    "energy": 0.537,
+    "valence": 0.0759,
+    "tempo": 117.735
+  },
+  {
+    "track_name": "Te Regalo Amores",
+    "artists": "R.K.M & Ken-Y",
+    "album_name": "Queda poco para la PAES 2.0",
+    "track_genre": "reggaeton",
+    "danceability": 0.845,
+    "energy": 0.832,
+    "valence": 0.773,
+    "tempo": 115.029
+  },
+  {
+    "track_name": "Hypnotize",
+    "artists": "The Notorious B.I.G.",
+    "album_name": "Rap Homage",
+    "track_genre": "hardcore",
+    "danceability": 0.895,
+    "energy": 0.694,
+    "valence": 0.632,
+    "tempo": 93.94
+  }
+]
