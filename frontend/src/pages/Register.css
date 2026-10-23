@@ -1,3 +1,7 @@
+/* =========================================================
+   vayam music - Register.css
+   Extra tweaks for the register page (loads after Login.css)
+   ========================================================= */
 
 .register-page {
   padding-top: 105px;
@@ -5,7 +9,7 @@
 }
 
 .register-card {
-  max-width: 470px;
+  max-width: 440px;
   padding-top: 30px;
   padding-bottom: 28px;
 }
@@ -13,11 +17,11 @@
 .register-card .auth-symbol {
   width: 42px;
   height: 42px;
-  margin-bottom: 19px;
+  margin-bottom: 18px;
 }
 
 .register-card .auth-subtitle {
-  margin-bottom: 23px;
+  margin-bottom: 22px;
 }
 
 .register-card .auth-field {
@@ -29,33 +33,18 @@
   margin-top: 7px;
   color: #8f829f;
   font-size: 10px;
+  line-height: 1.6;
 }
 
 .register-error {
-  margin: 8px 0 0;
-  color: #fca5a5;
-  font-size: 11px;
-}
-
-.register-terms {
-  align-items: flex-start;
-  margin-top: 5px;
-  margin-bottom: 22px;
-  line-height: 1.8;
-}
-
-.register-terms input {
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.register-terms a {
-  color: #c4a5fd;
-  text-decoration: none;
-}
-
-.register-terms a:hover {
-  text-decoration: underline;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 77, 109, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 77, 109, 0.08);
+  color: #ff9db1;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .register-card .auth-bottom-note {

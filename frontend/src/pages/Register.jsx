@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../api/musicApi";
 import { setToken, getApiErrorMessage } from "../api/api";
 import { EyeIcon, GoogleIcon } from "../components/AuthIcons";
+
 import "./Register.css";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -87,7 +88,8 @@ function Register() {
     const clearError = () => setFormError("");
 
     return (
-        <main className="auth-page register-page">
+        <main className="auth-split">
+            <section className="auth-page register-page">
             <div className="auth-glow auth-glow-one"></div>
             <div className="auth-glow auth-glow-two"></div>
 
@@ -217,6 +219,24 @@ function Register() {
             <Link to="/" className="auth-back-home">
                 ← Back to home
             </Link>
+            </section>
+                        <aside className="auth-visual">
+                <img className="auth-visual-img" src="/images/auth-singer.png" alt="" />
+
+                <div className="auth-visual-card">
+                    <div className="auth-visual-logo">
+                        <span>♫</span>
+                        <span>vayam<span className="auth-brand-dot">.</span> music</span>
+                    </div>
+                    <p className="auth-visual-text">
+                        Join vayam and let every mood find its soundtrack.
+                    </p>
+                    <div className="auth-eq" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+            </aside>
+
         </main>
     );
 }
