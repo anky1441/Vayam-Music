@@ -32,6 +32,14 @@ public class SongController {
         return term == null || term.isBlank() ? songService.all() : songService.search(term);
     }
 
+    @GetMapping("/search")
+    public List<SongResponse> search(@RequestParam(required = false) String query,
+                                     @RequestParam(required = false) String q,
+                                     @RequestParam(required = false) String search) {
+        String term = query != null ? query : (q != null ? q : search);
+        return term == null || term.isBlank() ? songService.all() : songService.search(term);
+    }
+
     @GetMapping("/liked")
     public List<SongResponse> liked(Authentication authentication) {
         return likeService.myLikes(userId(authentication));
@@ -57,24 +65,24 @@ public class SongController {
         return songService.byEnergy(energy);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public SongResponse get(@PathVariable Long id) {
         return songService.get(id);
     }
 
-    @PostMapping("/{songId}/like")
+    @PostMapping("/{songId:[0-9]+}/like")
     public Map<String, Object> like(@PathVariable Long songId, Authentication authentication) {
         likeService.like(userId(authentication), songId);
         return Map.of("success", true, "songId", songId, "liked", true);
     }
 
-    @DeleteMapping("/{songId}/like")
+    @DeleteMapping("/{songId:[0-9]+}/like")
     public Map<String, Object> unlike(@PathVariable Long songId, Authentication authentication) {
         likeService.unlike(userId(authentication), songId);
         return Map.of("success", true, "songId", songId, "liked", false);
     }
 
-    @GetMapping("/{songId}/is-liked")
+    @GetMapping(value = {"/{songId:[0-9]+}/is-liked", "/{songId:[0-9]+}/like"})
     public Map<String, Object> isLiked(@PathVariable Long songId, Authentication authentication) {
         Long userId = SecurityUtils.getUserIdOrNull(authentication, userRepository);
         if (userId == null) {
