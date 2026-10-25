@@ -20,7 +20,7 @@ function ProfileIcon() {
   );
 }
 
-function Navbar({ onProfileClick, onHomeClick }) {
+function Navbar({ onProfileClick, onHomeClick, onSearch }) {
   const [search, setSearch] = useState("");
   const [initial, setInitial] = useState("");
   const navigate = useNavigate();
@@ -101,13 +101,13 @@ function Navbar({ onProfileClick, onHomeClick }) {
         </svg>
       </a>
 
+
+
       <form
         className="navbar-search"
         onSubmit={(event) => {
           event.preventDefault();
-          if (search.trim()) {
-            console.log("Search:", search.trim());
-          }
+          onSearch?.(search.trim());
         }}
       >
         <button type="submit" aria-label="Search">
@@ -138,6 +138,7 @@ function Navbar({ onProfileClick, onHomeClick }) {
           aria-label="Search music"
         />
       </form>
+
 
       {loggedIn ? (
         <button

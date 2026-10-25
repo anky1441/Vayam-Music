@@ -14,6 +14,11 @@ import Footer from "./components/Footer";
 import HomePage from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import About from "./pages/About";
+import CollabPlaylists from "./pages/CollabPlaylists";
+
+
+
 
 function LandingPage() {
   return (
@@ -37,6 +42,8 @@ function App() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/collab" element={<CollabPlaylists />} />
     </Routes>
   );
 }
