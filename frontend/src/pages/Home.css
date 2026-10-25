@@ -8,6 +8,7 @@
   color: #f5efff;
   background: #100b18;
   font-family: "Poppins", sans-serif;
+  padding-bottom: 90px;
 }
 
 .music-home-layout {
@@ -640,4 +641,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.song-cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
 }

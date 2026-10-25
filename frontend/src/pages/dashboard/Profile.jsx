@@ -1,28 +1,55 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearToken, getApiErrorMessage } from "../../api/api";
+import { getCurrentUser, updateProfile } from "../../api/musicApi";
 import "./Profile.css";
 
-function Profile({ playlists = [] }) {
+const PHOTO_KEY = "vayam-profile-photo";
+
+function Profile({ playlists = [], onSelectPlaylist }) {
   const navigate = useNavigate();
 
-  const [name, setName] = useState(
-    () => localStorage.getItem("vayam-profile-name") || "Music Lover"
-  );
-  const [bio, setBio] = useState(
-    () => localStorage.getItem("vayam-profile-bio") || "Lost in music, found in every beat. ♫"
-  );
-  const [photo, setPhoto] = useState(
-    () => localStorage.getItem("vayam-profile-photo") || ""
-  );
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(name);
-  const [draftBio, setDraftBio] = useState(bio);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  // Photo stays in this browser until the backend has an upload endpoint.
+  const [photo, setPhoto] = useState(() => localStorage.getItem(PHOTO_KEY) || "");
 
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [draftBio, setDraftBio] = useState("");
+
+  // Load the profile from the backend.
   useEffect(() => {
-    localStorage.setItem("vayam-profile-name", name);
-    localStorage.setItem("vayam-profile-bio", bio);
-  }, [name, bio]);
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        const response = await getCurrentUser();
+        const user = response.data?.user ?? response.data;
+
+        if (!active) return;
+        setName(user?.name || "");
+        setEmail(user?.email || "");
+        setBio(user?.bio || "");
+      } catch (error) {
+        if (active) {
+          setLoadError(getApiErrorMessage(error, "Could not load your profile."));
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handlePhotoChange(event) {
     const file = event.target.files?.[0];
@@ -43,7 +70,7 @@ function Profile({ playlists = [] }) {
       const imageData = reader.result;
       if (typeof imageData === "string") {
         try {
-          localStorage.setItem("vayam-profile-photo", imageData);
+          localStorage.setItem(PHOTO_KEY, imageData);
           setPhoto(imageData);
         } catch {
           alert("This image is too large to save. Please choose a smaller image.");
@@ -54,29 +81,69 @@ function Profile({ playlists = [] }) {
     event.target.value = "";
   }
 
-  function saveProfile(event) {
+  async function saveProfile(event) {
     event.preventDefault();
-    if (!draftName.trim()) {
-      alert("Please enter your name.");
+    setSaveError("");
+
+    const cleanName = draftName.trim();
+    const cleanBio = draftBio.trim();
+
+    if (!cleanName) {
+      setSaveError("Please enter your name.");
       return;
     }
 
-    setName(draftName.trim());
-    setBio(draftBio.trim());
-    setEditing(false);
+    setSaving(true);
+    try {
+      await updateProfile({ name: cleanName, bio: cleanBio });
+      setName(cleanName);
+      setBio(cleanBio);
+      setEditing(false);
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Could not save your changes."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startEditing() {
+    setDraftName(name);
+    setDraftBio(bio);
+    setSaveError("");
+    setEditing(true);
   }
 
   function cancelEditing() {
-    setDraftName(name);
-    setDraftBio(bio);
+    setSaveError("");
     setEditing(false);
   }
 
   function handleLogout() {
-    // Demo logout: return to the landing page.
-    // Connect this to your authentication system when login is implemented.
-    navigate("/");
+    clearToken();
+    localStorage.removeItem(PHOTO_KEY);
+    navigate("/login", { replace: true });
   }
+
+  if (loading) {
+    return (
+      <section className="profile-view">
+        <p className="dashboard-subtitle">Loading your profile...</p>
+      </section>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <section className="profile-view">
+        <p className="dashboard-subtitle" role="alert">{loadError}</p>
+        <button className="profile-logout-button" onClick={handleLogout}>
+          <span aria-hidden="true">↪</span> Logout
+        </button>
+      </section>
+    );
+  }
+
+  const displayName = name || "Music Lover";
 
   return (
     <section className="profile-view">
@@ -92,19 +159,15 @@ function Profile({ playlists = [] }) {
         <div className="profile-photo-column">
           <div className="profile-photo">
             {photo ? (
-              <img src={photo} alt={`${name}'s profile`} />
+              <img src={photo} alt={`${displayName}'s profile`} />
             ) : (
-              <span>{name.trim().charAt(0).toUpperCase() || "♫"}</span>
+              <span>{displayName.trim().charAt(0).toUpperCase() || "♫"}</span>
             )}
           </div>
 
           <label className="profile-photo-button">
             Change Photo
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-            />
+            <input type="file" accept="image/*" onChange={handlePhotoChange} />
           </label>
         </div>
 
@@ -130,14 +193,17 @@ function Profile({ playlists = [] }) {
                 placeholder="Tell us about your music vibe..."
               />
 
+              {saveError && <p role="alert">{saveError}</p>}
+
               <div className="profile-actions">
-                <button className="profile-edit-button" type="submit">
-                  Save Changes
+                <button className="profile-edit-button" type="submit" disabled={saving}>
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
                 <button
                   className="profile-cancel-button"
                   type="button"
                   onClick={cancelEditing}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
@@ -145,26 +211,16 @@ function Profile({ playlists = [] }) {
             </form>
           ) : (
             <>
-              <h2>{name}</h2>
-              <p className="profile-username">@{name.trim().toLowerCase().replace(/\s+/g, "")}</p>
+              <h2>{displayName}</h2>
+              {email && <p className="profile-username">{email}</p>}
               <p className="profile-bio">{bio || "No bio added yet."}</p>
 
               <div className="profile-actions">
-                <button
-                  className="profile-edit-button"
-                  onClick={() => {
-                    setDraftName(name);
-                    setDraftBio(bio);
-                    setEditing(true);
-                  }}
-                >
+                <button className="profile-edit-button" onClick={startEditing}>
                   Edit Profile
                 </button>
 
-                <button
-                  className="profile-logout-button"
-                  onClick={handleLogout}
-                >
+                <button className="profile-logout-button" onClick={handleLogout}>
                   <span aria-hidden="true">↪</span> Logout
                 </button>
               </div>
@@ -191,7 +247,19 @@ function Profile({ playlists = [] }) {
         ) : (
           <div className="profile-playlist-grid">
             {playlists.map((playlist, index) => (
-              <article className="profile-playlist-card" key={playlist.id}>
+              <article
+                className="profile-playlist-card"
+                key={playlist.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectPlaylist?.(playlist.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectPlaylist?.(playlist.id);
+                  }
+                }}
+              >
                 <div className={`profile-playlist-art profile-art-${index % 4}`}>
                   <span>♫</span>
                 </div>
