@@ -1,3 +1,4 @@
+import { usePlayer } from "../context/PlayerContext";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -20,6 +21,7 @@ function HomeDiscovery({
     onLike,
     likedSongs,
 }) {
+    const { playSong } = usePlayer();
     return (
         <>
             {/* Welcome Section */}
@@ -72,7 +74,12 @@ function HomeDiscovery({
                 ) : (
                     <div className="song-grid">
                         {songs.map((song) => (
-                            <article className="song-card" key={song.id}>
+                            <article
+                                className="song-card"
+                                key={song.id}
+                                onClick={() => playSong(song)}
+                                style={{ cursor: "pointer" }}
+                            >
                                 <div className="song-art">
                                     {song.coverUrl ? (
                                         <img
@@ -94,7 +101,10 @@ function HomeDiscovery({
                                             ? "liked"
                                             : ""
                                         }`}
-                                    onClick={() => onLike(song.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onLike(song.id);
+                                    }}
                                     aria-label={`Like ${song.title}`}
                                 >
                                     {likedSongs.includes(song.id)
@@ -136,6 +146,7 @@ function HomeDiscovery({
 }
 
 function PlaylistDetails({ playlist, songs, onBack }) {
+    const { playSong } = usePlayer();
     const playlistSongIds = Array.isArray(playlist.songs)
         ? playlist.songs
         : [];
@@ -180,7 +191,12 @@ function PlaylistDetails({ playlist, songs, onBack }) {
             ) : (
                 <div className="dashboard-song-list">
                     {playlistSongs.map((song) => (
-                        <div className="dashboard-song" key={song.id}>
+                        <div
+                            className="dashboard-song"
+                            key={song.id}
+                            onClick={() => playSong(song)}
+                            style={{ cursor: "pointer" }}
+                        >
                             <div className="dashboard-song-art">
                                 {song.coverUrl ? (
                                     <img
