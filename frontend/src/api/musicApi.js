@@ -134,3 +134,23 @@ export const addPlaylistMember = (id, data) =>
 /** DELETE /api/playlists/{id}/members/{userId} - Removes collaborator from database */
 export const removePlaylistMember = (id, userId) =>
   api.delete(`/playlists/${id}/members/${userId}`);
+
+/* ==========================================================================
+   AI STORYSONG & STREAMING (FASTAPI ML BACKEND)
+   ========================================================================== */
+
+export const ML_BASE_URL =
+  import.meta.env.VITE_ML_API_URL || "http://localhost:8000";
+
+/** POST /storysong/match - Feature 4: Vision AI matches image + vibe text to songs */
+export const matchStorySong = async (formData) => {
+  const response = await fetch(`${ML_BASE_URL}/storysong/match`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || "StorySong matching failed");
+  }
+  return response.json();
+};

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { isAuthenticated } from "../api/api";
 import "./Hero.css";
 
 function Hero() {
+    const navigate = useNavigate();
     const covers = [
         "/images/music-cover-1.png",
         "/images/music-cover-2.jpg",
@@ -35,7 +38,11 @@ function Hero() {
                     let the music speak.
                 </p>
 
-                <button className="hero-button">
+                <button
+                    type="button"
+                    className="hero-button"
+                    onClick={() => navigate("/home")}
+                >
                     Explore Music <span>↗</span>
                 </button>
             </div>
@@ -67,7 +74,13 @@ function Hero() {
                                 Find the sound that feels like you.
                             </p>
 
-                            <button className="phone-get-started">
+                            <button
+                                type="button"
+                                className="phone-get-started"
+                                onClick={() =>
+                                    navigate(isAuthenticated() ? "/home" : "/register")
+                                }
+                            >
                                 Get Started <span>→</span>
                             </button>
                         </div>
