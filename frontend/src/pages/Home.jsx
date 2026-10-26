@@ -11,7 +11,7 @@ import Profile from "./dashboard/Profile.jsx";
 import CollabPlaylists from "./CollabPlaylists.jsx";
 import StorySong from "./dashboard/StorySong.jsx";
 
-import { getSongs, getLikedSongs, getUserPlaylists } from "../api/musicApi";
+import { getSongs, getLikedSongs, getUserPlaylists, searchCatalogSongs } from "../api/musicApi";
 import { isAuthenticated } from "../api/api";
 
 import "./Home.css";
@@ -24,6 +24,7 @@ function HomeDiscovery({
     onLike,
     likedSongs,
     searchQuery = "",
+    catalogSongs = [],
     onClearSearch,
     onSelectGenre,
 }) {
@@ -57,6 +58,18 @@ function HomeDiscovery({
 
         return true;
     });
+
+    // Merge filtered database songs with matching catalog songs from the 114k Spotify dataset
+    const seen = new Set();
+    const displaySongs = [];
+
+    for (const song of [...filteredSongs, ...(catalogSongs || [])]) {
+        const key = `${(song.title || "").toLowerCase().trim()}_${(song.artist || "").toLowerCase().trim()}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            displaySongs.push(song);
+        }
+    }
 
     return (
         <>
@@ -115,7 +128,7 @@ function HomeDiscovery({
                 <div className="music-section-heading">
                     <h2>
                         {trimmedQuery
-                            ? `Search Results for "${searchQuery}" (${filteredSongs.length})`
+                            ? `Search Results for "${searchQuery}" (${displaySongs.length})`
                             : selectedMood
                             ? `Trending Songs · ${selectedMood.toUpperCase()}`
                             : "Trending Songs"}
@@ -144,7 +157,7 @@ function HomeDiscovery({
                     <p>Loading songs...</p>
                 ) : songsError ? (
                     <p>{songsError}</p>
-                ) : filteredSongs.length === 0 ? (
+                ) : displaySongs.length === 0 ? (
                     <div style={{ padding: "40px 20px", textAlign: "center", color: "#b9adc9" }}>
                         <p style={{ fontSize: "16px", color: "#fff", marginBottom: "8px" }}>
                             No songs found matching "{searchQuery || selectedMood}".
@@ -173,7 +186,7 @@ function HomeDiscovery({
                     </div>
                 ) : (
                     <div className="song-grid">
-                        {filteredSongs.map((song) => {
+                        {displaySongs.map((song) => {
                             const songId = song.id || song._id;
                             const isLiked = likedSongs.some(
                                 (id) => String(id) === String(songId)
@@ -349,6 +362,28 @@ function Home() {
     const [songs, setSongs] = useState([]);
     const [songsLoading, setSongsLoading] = useState(true);
     const [songsError, setSongsError] = useState("");
+    const [catalogSongs, setCatalogSongs] = useState([]);
+
+    // Live search in 114k catalog when searchQuery is entered
+    useEffect(() => {
+        let isMounted = true;
+        if (!searchQuery.trim()) {
+            setCatalogSongs([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            const results = await searchCatalogSongs(searchQuery.trim(), 12);
+            if (isMounted) {
+                setCatalogSongs(Array.isArray(results) ? results : []);
+            }
+        }, 180);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    }, [searchQuery]);
 
     // Likes from localStorage (or database if authenticated)
     const [likedSongs, setLikedSongs] = useState(() =>
@@ -543,6 +578,7 @@ function Home() {
                             onLike={toggleLike}
                             likedSongs={likedSongs}
                             searchQuery={searchQuery}
+                            catalogSongs={catalogSongs}
                             onClearSearch={() => setSearchQuery("")}
                             onSelectGenre={(genre) => handleSearch(genre)}
                         />

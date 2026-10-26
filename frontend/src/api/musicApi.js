@@ -154,3 +154,18 @@ export const matchStorySong = async (formData) => {
   }
   return response.json();
 };
+
+/** GET /songs/search - Searches 114,000+ Spotify dataset & music catalog in ML backend */
+export const searchCatalogSongs = async (query, limit = 8) => {
+  if (!query || !query.trim()) return [];
+  try {
+    const response = await fetch(
+      `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(query.trim())}&limit=${limit}`
+    );
+    if (!response.ok) return [];
+    return response.json();
+  } catch (err) {
+    console.warn("Catalog search fallback:", err);
+    return [];
+  }
+};

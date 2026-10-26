@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isAuthenticated } from "../api/api";
-import { getCurrentUser, searchSongs } from "../api/musicApi";
+import { getCurrentUser, searchSongs, searchCatalogSongs } from "../api/musicApi";
 import { usePlayer } from "../context/PlayerContext";
 
 import "./Navbar.css";
@@ -110,16 +110,40 @@ function Navbar({ onProfileClick, onHomeClick, onSearch, searchQuery = "" }) {
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        const response = await searchSongs(query.trim());
-        const data = Array.isArray(response.data) ? response.data : [];
-        setSearchResults(data);
+        const [dbRes, catalogRes] = await Promise.allSettled([
+          searchSongs(query.trim()),
+          searchCatalogSongs(query.trim(), 8),
+        ]);
+
+        const dbSongs =
+          dbRes.status === "fulfilled" && Array.isArray(dbRes.value?.data)
+            ? dbRes.value.data
+            : [];
+        const catalogSongs =
+          catalogRes.status === "fulfilled" && Array.isArray(catalogRes.value)
+            ? catalogRes.value
+            : [];
+
+        // Combine distinct by title + artist
+        const seen = new Set();
+        const combined = [];
+
+        for (const song of [...dbSongs, ...catalogSongs]) {
+          const key = `${(song.title || "").toLowerCase().trim()}_${(song.artist || "").toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            combined.push(song);
+          }
+        }
+
+        setSearchResults(combined);
       } catch (error) {
         console.warn("Floating search query fallback:", error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 220);
+    }, 200);
   };
 
   const handleClearSearch = () => {
