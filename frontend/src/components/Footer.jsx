@@ -1,4 +1,4 @@
-
+import { useNavigate } from "react-router-dom";
 import "./Footer.css";
 
 function Footer({ showCTA = true }) {
@@ -87,6 +87,7 @@ function Footer({ showCTA = true }) {
           >
             How It Works
           </button>
+          
         </div>
 
         <div className="footer-links-group">
@@ -100,6 +101,7 @@ function Footer({ showCTA = true }) {
           <button onClick={() => scrollToSection("faq")} type="button">
             FAQs
           </button>
+          
         </div>
 
         <div className="footer-note-block">

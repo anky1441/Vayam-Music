@@ -27,6 +27,9 @@ public class User {
     @Column
     private String googleId;
 
+    @Column(length = 1000)
+    private String bio;
+
     public User() {}
 
     public User(String name, String email, String password) {
@@ -52,6 +55,7 @@ public class User {
     public String getProvider() { return provider; }
     public String getAvatarUrl() { return avatarUrl; }
     public String getGoogleId() { return googleId; }
+    public String getBio() { return bio; }
 
     public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
@@ -60,4 +64,5 @@ public class User {
     public void setProvider(String provider) { this.provider = provider; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public void setGoogleId(String googleId) { this.googleId = googleId; }
+    public void setBio(String bio) { this.bio = bio; }
 }

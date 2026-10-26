@@ -203,6 +203,34 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
             </svg>
           </button>
 
+
+      <form
+        className="navbar-search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSearch?.(search.trim());
+        }}
+      >
+        <button type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="m16 16 4 4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
           <input
             type="search"
             placeholder="Search songs, artists, moods..."
@@ -277,6 +305,7 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
           </div>
         )}
       </div>
+
 
       {loggedIn ? (
         <button

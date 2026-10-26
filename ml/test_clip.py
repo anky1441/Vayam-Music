@@ -59,10 +59,10 @@ Return ONLY a valid JSON object (no markdown, no extra text) with the following 
         "prompt": prompt,
         "max_tokens": 200,
     }
-
-    response = session.post(API_URL, json=payload, timeout=25)
-    if response.status_code != 200:
-        raise Exception(f"Vision API error: {response.status_code}")
+    
+response = session.post(API_URL, json=payload, timeout=25)
+if response.status_code != 200:
+    raise Exception(f"Vision API error: {response.status_code}")
 
     res_json = response.json()
     result_data = res_json.get("result", {})

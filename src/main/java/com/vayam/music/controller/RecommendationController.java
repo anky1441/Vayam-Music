@@ -49,4 +49,9 @@ public class RecommendationController {
     public List<SongResponse> genre(@PathVariable String genre) {
         return recommendationService.recommend(new RecommendationRequest(null, null, genre));
     }
+
+    @GetMapping("/song/{songId:[0-9]+}")
+    public List<SongResponse> song(@PathVariable Long songId) {
+        return recommendationService.recommend(new RecommendationRequest(null, songId, null));
+    }
 }
