@@ -8,3 +8,4 @@ scipy
 joblib
 yt-dlp
 Pillow
+requests
