@@ -6,7 +6,7 @@ numpy
 scikit-learn
 scipy
 joblib
-yt-dlp
+yt-dlp[default]
 python-dotenv
 pillow
 Pillow
