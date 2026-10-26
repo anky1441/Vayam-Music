@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../api/musicApi";
 import { setToken, getApiErrorMessage } from "../api/api";
-import { EyeIcon, GoogleIcon } from "../components/AuthIcons";
+import { EyeIcon } from "../components/AuthIcons";
+import GoogleAuthButton from "../components/GoogleAuthButton";
 
 import "./Register.css";
 
@@ -80,11 +81,6 @@ function Register() {
         }
     };
 
-    // Future: connect Google sign-up here, then call googleAuth() from musicApi.
-    const handleGoogleSignup = () => {
-        setFormError("Google sign-in is coming soon.");
-    };
-
     const clearError = () => setFormError("");
 
     return (
@@ -107,14 +103,7 @@ function Register() {
                     Your next favourite song is waiting to be discovered.
                 </p>
 
-                <button
-                    type="button"
-                    className="auth-google"
-                    onClick={handleGoogleSignup}
-                >
-                    <GoogleIcon />
-                    <span>Continue with Google</span>
-                </button>
+                <GoogleAuthButton text="signup_with" onError={setFormError} />
 
                 <div className="auth-divider"><span>or</span></div>
 

@@ -1,5 +1,7 @@
-
 import { useState } from "react";
+import { getApiErrorMessage } from "../../api/api";
+import SongRow from "../../components/SongRow";
+import { sameId } from "../../utils/music";
 import "./DashboardContent.css";
 
 function CreatePlaylist({ songs, onCreatePlaylist }) {
@@ -7,31 +9,38 @@ function CreatePlaylist({ songs, onCreatePlaylist }) {
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [selectedSongs, setSelectedSongs] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const filteredSongs = songs.filter((song) =>
-    `${song.title} ${song.artist}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
+    `${song.title} ${song.artist}`.toLowerCase().includes(search.toLowerCase())
   );
 
   function toggleSong(id) {
     setSelectedSongs((current) =>
-      current.includes(id)
-        ? current.filter((songId) => songId !== id)
+      current.some((songId) => sameId(songId, id))
+        ? current.filter((songId) => !sameId(songId, id))
         : [...current, id]
     );
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    if (!name.trim() || saving) return;
 
-    if (!name.trim()) return;
+    setSaving(true);
+    setError("");
 
-    onCreatePlaylist({
-      name: name.trim(),
-      description: description.trim(),
-      songs: selectedSongs,
-    });
+    try {
+      await onCreatePlaylist({
+        name: name.trim(),
+        description: description.trim(),
+        songIds: selectedSongs,
+      });
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Could not create the playlist. Please try again."));
+      setSaving(false);
+    }
   }
 
   return (
@@ -53,9 +62,7 @@ function CreatePlaylist({ songs, onCreatePlaylist }) {
           required
         />
 
-        <label htmlFor="playlist-description">
-          Description (optional)
-        </label>
+        <label htmlFor="playlist-description">Description (optional)</label>
         <textarea
           id="playlist-description"
           value={description}
@@ -73,23 +80,14 @@ function CreatePlaylist({ songs, onCreatePlaylist }) {
           aria-label="Search songs or artists"
         />
 
-        <p className="dashboard-subtitle">
-          {selectedSongs.length} song(s) selected
-        </p>
+        <p className="dashboard-subtitle">{selectedSongs.length} song(s) selected</p>
 
         <div className="dashboard-song-list">
           {filteredSongs.map((song) => {
-            const selected = selectedSongs.includes(song.id);
+            const selected = selectedSongs.some((id) => sameId(id, song.id));
 
             return (
-              <div className="dashboard-song" key={song.id}>
-                <div className={`dashboard-song-art ${song.art}`}>
-                  ♫
-                </div>
-                <div className="dashboard-song-info">
-                  <h3>{song.title}</h3>
-                  <p>{song.artist}</p>
-                </div>
+              <SongRow key={song.id} song={song}>
                 <button
                   type="button"
                   className={`dashboard-add-button ${selected ? "selected" : ""}`}
@@ -97,19 +95,19 @@ function CreatePlaylist({ songs, onCreatePlaylist }) {
                 >
                   {selected ? "Added ✓" : "+ Add"}
                 </button>
-              </div>
+              </SongRow>
             );
           })}
 
           {filteredSongs.length === 0 && (
-            <p className="dashboard-subtitle">
-              No matching sample songs found.
-            </p>
+            <p className="dashboard-subtitle">No matching songs found.</p>
           )}
         </div>
 
-        <button className="dashboard-primary-button" type="submit">
-          Create Playlist
+        {error && <p className="dv-error" role="alert">{error}</p>}
+
+        <button className="dashboard-primary-button" type="submit" disabled={saving}>
+          {saving ? "Creating..." : "Create Playlist"}
         </button>
       </form>
     </section>

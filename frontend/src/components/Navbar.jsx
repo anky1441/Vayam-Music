@@ -101,13 +101,20 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
         </svg>
       </a>
 
-
-
       <form
         className="navbar-search"
         onSubmit={(event) => {
           event.preventDefault();
-          onSearch?.(search.trim());
+          const query = search.trim();
+          if (!query) return;
+
+          if (onSearch) {
+            // Already on the Home page: show results in the main panel.
+            onSearch(query);
+          } else {
+            // Anywhere else: go to Home and open the Search view.
+            navigate("/home", { state: { view: "search", query } });
+          }
         }}
       >
         <button type="submit" aria-label="Search">
@@ -138,7 +145,6 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
           aria-label="Search music"
         />
       </form>
-
 
       {loggedIn ? (
         <button

@@ -1,10 +1,17 @@
-
-import { usePlayer } from "../../context/PlayerContext";
+import SongRow from "../../components/SongRow";
+import { getSongId, sameId, unwrapSong } from "../../utils/music";
 import "./DashboardContent.css";
 
-function LikedSongs({ songs, likedSongs, onToggleLike }) {
-  const { playSong } = usePlayer();
-  const liked = songs.filter((song) => likedSongs.includes(song.id));
+// `likedItems` comes from GET /users/me/likes. If the backend only returns
+// { songId } records, the full song is looked up in the `songs` list.
+function LikedSongs({ likedItems, songs, onToggleLike, onOpenSong }) {
+  const liked = likedItems
+    .map((item) => {
+      const song = unwrapSong(item);
+      if (song?.title) return song;
+      return songs.find((candidate) => sameId(candidate.id, getSongId(item)));
+    })
+    .filter(Boolean);
 
   return (
     <section className="dashboard-view">
@@ -23,30 +30,13 @@ function LikedSongs({ songs, likedSongs, onToggleLike }) {
       ) : (
         <div className="dashboard-song-list">
           {liked.map((song) => (
-            <div
-              className="dashboard-song"
+            <SongRow
               key={song.id}
-              onClick={() => playSong(song)}
-              style={{ cursor: "pointer" }}
-            >
-              <div className={`dashboard-song-art ${song.art}`}>
-                ♫
-              </div>
-              <div className="dashboard-song-info">
-                <h3>{song.title}</h3>
-                <p>{song.artist}</p>
-              </div>
-              <button
-                className="dashboard-heart liked"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleLike(song.id);
-                }}
-                aria-label={`Unlike ${song.title}`}
-              >
-                ♥
-              </button>
-            </div>
+              song={song}
+              liked
+              onToggleLike={onToggleLike}
+              onOpen={onOpenSong}
+            />
           ))}
         </div>
       )}

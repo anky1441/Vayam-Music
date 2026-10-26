@@ -1,0 +1,8 @@
+.auth-google-slot {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  overflow: hidden;
+  border-radius: 11px;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { clearToken, getApiErrorMessage } from "../../api/api";
 import { getCurrentUser, updateProfile } from "../../api/musicApi";
+import { getPlaylistSongCount } from "../../utils/music";
 import "./Profile.css";
 
 const PHOTO_KEY = "vayam-profile-photo";
@@ -265,7 +266,7 @@ function Profile({ playlists = [], onSelectPlaylist }) {
                 </div>
                 <div className="profile-playlist-details">
                   <h3>{playlist.name}</h3>
-                  <p>{playlist.songs?.length || 0} songs</p>
+                  <p>{getPlaylistSongCount(playlist)} songs</p>
                   {playlist.description && <p>{playlist.description}</p>}
                 </div>
               </article>

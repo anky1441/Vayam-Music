@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginUser } from "../api/musicApi";
 import { setToken, getApiErrorMessage } from "../api/api";
-import { EyeIcon, GoogleIcon } from "../components/AuthIcons";
+import { EyeIcon } from "../components/AuthIcons";
+import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./Login.css";
 
 function Login() {
@@ -48,11 +49,6 @@ function Login() {
         }
     };
 
-    // Future: connect Google sign-in here, then call googleAuth() from musicApi.
-    const handleGoogleLogin = () => {
-        setLoginError("Google sign-in is coming soon.");
-    };
-
     return (
         <main className="auth-split">
             <section className="auth-page">
@@ -79,14 +75,7 @@ function Login() {
                         </p>
                     )}
 
-                    <button
-                        type="button"
-                        className="auth-google"
-                        onClick={handleGoogleLogin}
-                    >
-                        <GoogleIcon />
-                        <span>Continue with Google</span>
-                    </button>
+                    <GoogleAuthButton text="signin_with" onError={setLoginError} />
 
                     <div className="auth-divider"><span>or</span></div>
 

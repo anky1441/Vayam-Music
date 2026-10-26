@@ -1,25 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import { getApiErrorMessage } from "../api/api";
+import {
+  createPlaylist,
+  getCurrentUser,
+  getMyPlaylists,
+  getPlaylistMembers,
+} from "../api/musicApi";
+import {
+  getMemberId,
+  getMemberName,
+  getOwnerId,
+  getUser,
+  sameId,
+  toList,
+} from "../utils/music";
+import "./Home.css";
 import "./CollabPlaylists.css";
-
-/* ---------- API setup ---------- */
-// Vite: VITE_API_URL in .env   |   Create React App: use process.env.REACT_APP_API_URL
-const API = import.meta.env.VITE_API_BASE_URL || "";
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${localStorage.getItem("token")}`, // change if you store the token differently
-});
-
-/* ---------- Helpers: tolerate different field names from the backend ---------- */
-const memberId = (m) => m.id ?? m.userId ?? m.user?.id;
-const memberName = (m) => m.name || m.username || m.user?.name || m.user?.username || "User";
 
 const normalize = (p, members) => ({
   id: p.id,
   name: p.name || p.title || "Untitled playlist",
   description: p.description || "",
-  ownerId: p.ownerId ?? p.owner?.id ?? p.userId,
+  ownerId: getOwnerId(p),
   songCount: p.songCount ?? p.songs?.length ?? 0,
   members: members ?? p.members ?? [],
 });
@@ -33,12 +37,12 @@ function AvatarStack({ members }) {
     <div className="cp-avatars">
       {shown.map((m, i) => (
         <span
-          key={memberId(m) ?? i}
+          key={getMemberId(m) ?? i}
           className="cp-avatar"
-          title={memberName(m)}
+          title={getMemberName(m)}
           style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length], zIndex: 10 - i }}
         >
-          {memberName(m).charAt(0).toUpperCase()}
+          {getMemberName(m).charAt(0).toUpperCase()}
         </span>
       ))}
       {extra > 0 && <span className="cp-avatar cp-avatar-extra">+{extra}</span>}
@@ -66,43 +70,30 @@ export default function CollabPlaylists() {
     setLoading(true);
     setLoadError("");
     try {
-      const [meRes, plRes] = await Promise.all([
-        fetch(`${API}/api/users/me`, { headers: authHeaders() }),
-        fetch(`${API}/api/users/me/playlists`, { headers: authHeaders() }),
-      ]);
+      const [meRes, plRes] = await Promise.all([getCurrentUser(), getMyPlaylists()]);
+      const list = toList(plRes.data);
 
-      if (meRes.status === 401 || plRes.status === 401) {
-        navigate("/login");
-        return;
-      }
-      if (!meRes.ok || !plRes.ok) throw new Error("Request failed");
-
-      const meData = await meRes.json();
-      const raw = await plRes.json();
-      const list = Array.isArray(raw) ? raw : raw.content || raw.playlists || [];
-
-      // If the playlist object has no members, fetch them for each playlist
+      // Fetch the members of each playlist (skipped when the playlist already has them)
       const full = await Promise.all(
         list.map(async (p) => {
           if (Array.isArray(p.members)) return normalize(p);
           try {
-            const r = await fetch(`${API}/api/playlists/${p.id}/members`, { headers: authHeaders() });
-            const m = r.ok ? await r.json() : [];
-            return normalize(p, Array.isArray(m) ? m : m.content || []);
+            const r = await getPlaylistMembers(p.id);
+            return normalize(p, toList(r.data));
           } catch {
             return normalize(p, []);
           }
         })
       );
 
-      setMe(meData);
+      setMe(getUser(meRes));
       setPlaylists(full);
-    } catch {
-      setLoadError("Could not load your playlists. Check your connection and try again.");
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, "Could not load your playlists. Check your connection and try again."));
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -133,25 +124,20 @@ export default function CollabPlaylists() {
     setSaving(true);
     setFormError("");
     try {
-      const res = await fetch(`${API}/api/playlists`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
-      });
-      if (!res.ok) throw new Error();
-      const created = await res.json();
+      const res = await createPlaylist({ name: name.trim(), description: description.trim() });
+      const created = res.data?.playlist ?? res.data;
       const meMember = me ? [{ id: me.id, name: me.name || me.username || "You" }] : [];
       setPlaylists((prev) => [normalize({ ownerId: me?.id, ...created }, created.members || meMember), ...prev]);
       closeModal();
-    } catch {
-      setFormError("Could not create the playlist. Please try again.");
+    } catch (error) {
+      setFormError(getApiErrorMessage(error, "Could not create the playlist. Please try again."));
     } finally {
       setSaving(false);
     }
   };
 
   /* ---------- Filtering ---------- */
-  const isOwner = (p) => me && p.ownerId === me.id;
+  const isOwner = (p) => Boolean(me) && sameId(p.ownerId, me.id);
   const visible = playlists.filter((p) => {
     if (tab === "owned") return isOwner(p);
     if (tab === "shared") return !isOwner(p);
@@ -165,7 +151,9 @@ export default function CollabPlaylists() {
   ];
 
   return (
-    <div className="cp-page">
+    <div className="music-home">
+      <Navbar />
+      <div className="cp-page">
       {/* Header */}
       <div className="cp-header">
         <div>
@@ -300,6 +288,7 @@ export default function CollabPlaylists() {
           </form>
         </div>
       )}
+      </div>
     </div>
   );
 }
