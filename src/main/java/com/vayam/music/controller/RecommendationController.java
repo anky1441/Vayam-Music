@@ -2,18 +2,33 @@ package com.vayam.music.controller;
 
 import com.vayam.music.dto.RecommendationRequest;
 import com.vayam.music.dto.SongResponse;
+import com.vayam.music.service.MlRecommendationClient;
 import com.vayam.music.service.RecommendationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/recommendations")
 public class RecommendationController {
     private final RecommendationService recommendationService;
+    private final MlRecommendationClient mlClient;
 
-    public RecommendationController(RecommendationService recommendationService) {
+    public RecommendationController(RecommendationService recommendationService,
+                                    MlRecommendationClient mlClient) {
         this.recommendationService = recommendationService;
+        this.mlClient = mlClient;
+    }
+
+    @GetMapping("/status")
+    public Map<String, Object> status() {
+        boolean available = mlClient.isAvailable();
+        return Map.of(
+                "mlApiUrl", mlClient.getBaseUrl(),
+                "available", available,
+                "engine", available ? "ML Microservice (FastAPI + Scikit-Learn)" : "Hybrid Database Fallback Engine"
+        );
     }
 
     @PostMapping

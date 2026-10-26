@@ -20,4 +20,7 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     List<Song> findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCaseOrGenreContainingIgnoreCaseOrMoodContainingIgnoreCaseOrVibeContainingIgnoreCaseOrEnergyContainingIgnoreCase(
             String title, String artist, String genre, String mood, String vibe, String energy
     );
+    java.util.Optional<Song> findFirstByTitleIgnoreCaseAndArtistIgnoreCase(String title, String artist);
+    java.util.Optional<Song> findFirstByTitleIgnoreCase(String title);
 }
+

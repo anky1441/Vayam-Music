@@ -92,7 +92,18 @@ public class SongController {
         return Map.of("songId", songId, "liked", liked);
     }
 
+    @PostMapping
+    public SongResponse create(@jakarta.validation.Valid @RequestBody com.vayam.music.dto.CreateSongRequest request) {
+        return songService.create(request);
+    }
+
+    @PutMapping("/{id:[0-9]+}")
+    public SongResponse update(@PathVariable Long id, @RequestBody com.vayam.music.dto.CreateSongRequest request) {
+        return songService.update(id, request);
+    }
+
     private Long userId(Authentication authentication) {
         return SecurityUtils.getUserId(authentication, userRepository);
     }
 }
+

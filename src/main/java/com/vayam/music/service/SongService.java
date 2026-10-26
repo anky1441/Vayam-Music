@@ -81,4 +81,34 @@ public class SongService {
         return songRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Song not found with id " + id));
     }
+
+    @Transactional
+    public SongResponse create(com.vayam.music.dto.CreateSongRequest req) {
+        Song song = new Song(
+                req.title().trim(),
+                req.artist().trim(),
+                req.genre() != null && !req.genre().isBlank() ? req.genre().trim() : "Bollywood",
+                req.mood() != null && !req.mood().isBlank() ? req.mood().trim() : "Chill",
+                req.energy() != null && !req.energy().isBlank() ? req.energy().trim() : "Medium",
+                req.vibe() != null && !req.vibe().isBlank() ? req.vibe().trim() : "Good Vibes",
+                req.audioUrl(),
+                req.coverUrl()
+        );
+        return SongResponse.from(songRepository.save(song));
+    }
+
+    @Transactional
+    public SongResponse update(Long id, com.vayam.music.dto.CreateSongRequest req) {
+        Song song = getEntity(id);
+        if (req.title() != null && !req.title().isBlank()) song.setTitle(req.title().trim());
+        if (req.artist() != null && !req.artist().isBlank()) song.setArtist(req.artist().trim());
+        if (req.genre() != null) song.setGenre(req.genre().trim());
+        if (req.mood() != null) song.setMood(req.mood().trim());
+        if (req.energy() != null) song.setEnergy(req.energy().trim());
+        if (req.vibe() != null) song.setVibe(req.vibe().trim());
+        if (req.audioUrl() != null) song.setAudioUrl(req.audioUrl().trim());
+        if (req.coverUrl() != null) song.setCoverUrl(req.coverUrl().trim());
+        return SongResponse.from(songRepository.save(song));
+    }
 }
+

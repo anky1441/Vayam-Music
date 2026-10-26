@@ -2,27 +2,139 @@ package com.vayam.music.service;
 
 import com.vayam.music.dto.RecommendationRequest;
 import com.vayam.music.dto.SongResponse;
+import com.vayam.music.dto.ml.MlSongDto;
 import com.vayam.music.model.Song;
 import com.vayam.music.repository.SongRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 public class RecommendationService {
-    private final SongRepository songRepository;
+    private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
 
-    public RecommendationService(SongRepository songRepository) {
+    private final SongRepository songRepository;
+    private final MlRecommendationClient mlClient;
+
+    public RecommendationService(SongRepository songRepository, MlRecommendationClient mlClient) {
         this.songRepository = songRepository;
+        this.mlClient = mlClient;
     }
 
     /**
-     * Hybrid recommendation engine supporting mood, prompt keywords, and similarity to a liked song.
+     * AI/ML Recommendation engine with intelligent rule-based fallback.
+     * Queries the FastAPI ML model microservice first; if unreachable, cold-starting,
+     * or no matches are found, gracefully falls back to database scoring.
      */
     public List<SongResponse> recommend(RecommendationRequest request) {
+        // Step 1: Attempt recommendation via ML microservice
+        try {
+            List<MlSongDto> mlSongs = queryMlModel(request);
+            if (mlSongs != null && !mlSongs.isEmpty()) {
+                String defaultMood = request != null && request.mood() != null ? request.mood() : "Chill";
+                List<SongResponse> mlResults = new ArrayList<>();
+                for (MlSongDto mlSong : mlSongs) {
+                    Song entity = findOrCreateSong(mlSong, defaultMood);
+                    if (entity != null) {
+                        mlResults.add(SongResponse.from(entity));
+                    }
+                }
+                if (!mlResults.isEmpty()) {
+                    log.info("Returning {} ML-powered song recommendations", mlResults.size());
+                    return mlResults;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("ML model query failed, activating hybrid database fallback: {}", e.getMessage());
+        }
+
+        // Step 2: Fallback to internal rule-based scoring engine
+        return fallbackRecommend(request);
+    }
+
+    private List<MlSongDto> queryMlModel(RecommendationRequest request) {
+        if (request == null) {
+            return Collections.emptyList();
+        }
+
+        // 1. Liked song similarity via ML content model
+        if (request.likedSongId() != null) {
+            Song liked = songRepository.findById(request.likedSongId()).orElse(null);
+            if (liked != null && liked.getTitle() != null && !liked.getTitle().isBlank()) {
+                List<MlSongDto> similar = mlClient.recommendSimilar(liked.getTitle(), 10);
+                if (!similar.isEmpty()) {
+                    return similar;
+                }
+            }
+        }
+
+        // 2. Explicit Mood recommendation via ML model
+        if (request.mood() != null && !request.mood().isBlank()) {
+            List<MlSongDto> byMood = mlClient.recommendByMood(request.mood(), 10);
+            if (!byMood.isEmpty()) {
+                return byMood;
+            }
+        }
+
+        // 3. Prompt recommendation
+        if (request.prompt() != null && !request.prompt().isBlank()) {
+            String prompt = request.prompt().trim();
+            // Try matching as mood first
+            String mappedMood = mlClient.mapToMlMood(prompt);
+            List<MlSongDto> promptMood = mlClient.recommendByMood(mappedMood, 10);
+            if (!promptMood.isEmpty()) {
+                return promptMood;
+            }
+
+            // Or try matching similar by prompt title
+            List<MlSongDto> promptSimilar = mlClient.recommendSimilar(prompt, 10);
+            if (!promptSimilar.isEmpty()) {
+                return promptSimilar;
+            }
+        }
+
+        return Collections.emptyList();
+    }
+
+    public Song findOrCreateSong(MlSongDto dto, String fallbackMood) {
+        if (dto == null || dto.trackName() == null || dto.trackName().isBlank()) {
+            return null;
+        }
+
+        String title = dto.trackName().trim();
+        String artist = (dto.artists() != null && !dto.artists().isBlank()) ? dto.artists().trim() : "Various Artists";
+        String genre = (dto.trackGenre() != null && !dto.trackGenre().isBlank()) ? dto.trackGenre().trim() : "Pop";
+
+        return songRepository.findFirstByTitleIgnoreCaseAndArtistIgnoreCase(title, artist)
+                .or(() -> songRepository.findFirstByTitleIgnoreCase(title))
+                .orElseGet(() -> {
+                    String audioUrl = "https://actions.google.com/sounds/v1/science_fiction/alien_spaceship_flyby.ogg";
+                    String coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500";
+                    Song song = new Song(
+                            title,
+                            artist,
+                            genre,
+                            fallbackMood != null ? fallbackMood : "Chill",
+                            "Medium",
+                            genre,
+                            audioUrl,
+                            coverUrl
+                    );
+                    return songRepository.save(song);
+                });
+    }
+
+    /**
+     * Fallback recommendation engine using database matching and scoring.
+     */
+    public List<SongResponse> fallbackRecommend(RecommendationRequest request) {
         List<Song> allSongs = songRepository.findAll();
         if (allSongs.isEmpty()) {
             return List.of();
@@ -50,7 +162,6 @@ public class RecommendationService {
                 .limit(10)
                 .toList();
 
-        // If no songs matched the filters, return top 10 general songs as fallback
         if (scored.isEmpty()) {
             return allSongs.stream()
                     .filter(s -> referenceSong == null || !s.getId().equals(referenceSong.getId()))
