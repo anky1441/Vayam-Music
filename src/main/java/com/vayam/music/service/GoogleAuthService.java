@@ -49,6 +49,8 @@ public class GoogleAuthService {
         this.restTemplate = new RestTemplate(factory);
     }
 
+    private static final String GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+
     public String getGoogleClientId() {
         return googleClientId != null ? googleClientId.trim() : "";
     }
@@ -63,7 +65,11 @@ public class GoogleAuthService {
         String trimmedToken = idToken.trim();
 
         // 1. Support dev / testing mock tokens for local testing without active Google Cloud project
-        if (trimmedToken.equals("test-google-token") || trimmedToken.startsWith("dev-mock:")) {
+        if (trimmedToken.equals("test-google-token")
+                || trimmedToken.equals("mock-google-token")
+                || trimmedToken.equals("dev-mock")
+                || trimmedToken.equals("mock")
+                || trimmedToken.startsWith("dev-mock:")) {
             log.info("Authenticating with dev mock Google token");
             String name = "Google Test User";
             String email = "google.test.user@example.com";
@@ -80,72 +86,23 @@ public class GoogleAuthService {
             );
         }
 
-        // 2. Real Google verification via Google's official tokeninfo endpoint
+        // 2. If token starts with "ya29.", it is a Google OAuth2 access token
+        if (trimmedToken.startsWith("ya29.")) {
+            return verifyAccessToken(trimmedToken);
+        }
+
+        // 3. Real Google verification via Google's official tokeninfo endpoint
         try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    GOOGLE_TOKENINFO_URL,
-                    HttpMethod.GET,
-                    null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {},
-                    trimmedToken
-            );
-
-            Map<String, Object> body = response.getBody();
-            if (body == null || !response.getStatusCode().is2xxSuccessful()) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Failed to verify token with Google");
+            return verifyIdToken(trimmedToken);
+        } catch (HttpClientErrorException.BadRequest e) {
+            // Attempt access token verification as fallback in case non-ya29 token was passed
+            try {
+                return verifyAccessToken(trimmedToken);
+            } catch (Exception ignored) {
             }
-
-            // Verify issuer
-            String iss = (String) body.get("iss");
-            if (iss == null || (!iss.equals("accounts.google.com") && !iss.equals("https://accounts.google.com"))) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google token issuer: " + iss);
-            }
-
-            // Verify email verification
-            Object emailVerifiedObj = body.get("email_verified");
-            boolean emailVerified = "true".equalsIgnoreCase(String.valueOf(emailVerifiedObj));
-            if (!emailVerified) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google email is not verified");
-            }
-
-            // Verify audience if client ID is configured
-            String aud = (String) body.get("aud");
-            if (googleClientId != null && !googleClientId.isBlank()) {
-                if (!googleClientId.trim().equals(aud)) {
-                    log.warn("Google token audience [{}] does not match configured client-id [{}]", aud, googleClientId);
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token audience mismatch");
-                }
-            }
-
-            // Verify expiration
-            Object expObj = body.get("exp");
-            if (expObj != null) {
-                try {
-                    long expSeconds = Long.parseLong(expObj.toString());
-                    long nowSeconds = System.currentTimeMillis() / 1000;
-                    if (expSeconds < nowSeconds) {
-                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token has expired");
-                    }
-                } catch (NumberFormatException ignored) {
-                }
-            }
-
-            String email = (String) body.get("email");
-            if (email == null || email.isBlank()) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token does not contain an email");
-            }
-
-            String name = (String) body.get("name");
-            if (name == null || name.isBlank()) {
-                name = email.split("@")[0];
-            }
-
-            String sub = (String) body.get("sub");
-            String picture = (String) body.get("picture");
-
-            return new GoogleUserInfo(sub, email.toLowerCase().trim(), name, picture);
-
-        } catch (HttpClientErrorException.BadRequest | HttpClientErrorException.Unauthorized e) {
+            log.warn("Google token verification rejected: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired Google token");
+        } catch (HttpClientErrorException.Unauthorized e) {
             log.warn("Google token verification rejected: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired Google token");
         } catch (ResponseStatusException e) {
@@ -154,6 +111,135 @@ public class GoogleAuthService {
             log.error("Error during Google token verification", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error communicating with Google: " + e.getMessage());
         }
+    }
+
+    private GoogleUserInfo verifyIdToken(String trimmedToken) {
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                GOOGLE_TOKENINFO_URL,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {},
+                trimmedToken
+        );
+
+        Map<String, Object> body = response.getBody();
+        if (body == null || !response.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Failed to verify token with Google");
+        }
+
+        // Verify issuer
+        String iss = (String) body.get("iss");
+        if (iss == null || (!iss.equals("accounts.google.com") && !iss.equals("https://accounts.google.com"))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google token issuer: " + iss);
+        }
+
+        // Verify email verification
+        Object emailVerifiedObj = body.get("email_verified");
+        boolean emailVerified = "true".equalsIgnoreCase(String.valueOf(emailVerifiedObj));
+        if (!emailVerified) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google email is not verified");
+        }
+
+        // Verify audience if client ID is configured (supports multi-client IDs and azp)
+        String aud = (String) body.get("aud");
+        String azp = (String) body.get("azp");
+        if (!isAudienceAllowed(aud, azp)) {
+            log.warn("Google token audience [{}] azp [{}] does not match configured client-id [{}]", aud, azp, googleClientId);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token audience mismatch");
+        }
+
+        // Verify expiration with 60-second grace period for clock skew
+        Object expObj = body.get("exp");
+        if (expObj != null) {
+            try {
+                long expSeconds = Long.parseLong(expObj.toString());
+                long nowSeconds = System.currentTimeMillis() / 1000;
+                if (expSeconds + 60 < nowSeconds) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token has expired");
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        String email = (String) body.get("email");
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google token does not contain an email");
+        }
+
+        String name = (String) body.get("name");
+        if (name == null || name.isBlank()) {
+            String givenName = (String) body.get("given_name");
+            String familyName = (String) body.get("family_name");
+            if (givenName != null && !givenName.isBlank()) {
+                name = (familyName != null && !familyName.isBlank()) ? givenName + " " + familyName : givenName;
+            } else {
+                name = email.split("@")[0];
+            }
+        }
+
+        String sub = (String) body.get("sub");
+        String picture = (String) body.get("picture");
+
+        return new GoogleUserInfo(sub, email.toLowerCase().trim(), name, picture);
+    }
+
+    private GoogleUserInfo verifyAccessToken(String accessToken) {
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                GOOGLE_USERINFO_URL,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        Map<String, Object> body = response.getBody();
+        if (body == null || !response.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Failed to verify access token with Google");
+        }
+
+        Object emailVerifiedObj = body.get("email_verified");
+        boolean emailVerified = emailVerifiedObj == null || "true".equalsIgnoreCase(String.valueOf(emailVerifiedObj));
+        if (!emailVerified) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google email is not verified");
+        }
+
+        String email = (String) body.get("email");
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google access token did not return an email");
+        }
+
+        String name = (String) body.get("name");
+        if (name == null || name.isBlank()) {
+            name = email.split("@")[0];
+        }
+
+        String sub = (String) body.get("sub");
+        String picture = (String) body.get("picture");
+
+        return new GoogleUserInfo(sub, email.toLowerCase().trim(), name, picture);
+    }
+
+    private boolean isAudienceAllowed(String aud, String azp) {
+        if (googleClientId == null || googleClientId.isBlank()) {
+            return true;
+        }
+        String cleaned = googleClientId.replace("\"", "").replace("'", "").trim();
+        if (cleaned.isBlank()) {
+            return true;
+        }
+        String[] allowedIds = cleaned.split("[,;\\s]+");
+        for (String expectedId : allowedIds) {
+            String trimmed = expectedId.trim();
+            if (!trimmed.isEmpty()) {
+                if (trimmed.equals(aud) || (azp != null && trimmed.equals(azp))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public AuthResponse authenticateGoogleUser(String idToken) {
