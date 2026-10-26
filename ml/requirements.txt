@@ -7,6 +7,8 @@ scikit-learn
 scipy
 joblib
 yt-dlp
+python-dotenv
+pillow
 Pillow
 requests
 python-multipart

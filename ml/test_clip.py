@@ -19,9 +19,10 @@ session = requests.Session()
 session.headers.update({"Authorization": f"Bearer {API_TOKEN}"})
 
 # load spotify dataset with only the columns we actually need
-DATA_PATH = Path("models/vayam_cleaned_songs.csv")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "models" / "vayam_cleaned_songs.csv"
 if not DATA_PATH.exists():
-    DATA_PATH = Path("vayam_cleaned_songs.csv")
+    DATA_PATH = BASE_DIR / "vayam_cleaned_songs.csv"
 
 NEEDED_COLUMNS = ["track_name", "artists", "track_genre", "energy", "valence", "popularity"]
 songs = pd.read_csv(DATA_PATH, usecols=NEEDED_COLUMNS)
