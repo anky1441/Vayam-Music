@@ -113,4 +113,88 @@ class GoogleAuthIntegrationTest {
                         """))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @Order(7)
+    void testGoogleLoginWithGisCredentialAlias() throws Exception {
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "credential": "dev-mock:Vanshika Kesarwani:vanshika@example.com"
+                            }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.email", is("vanshika@example.com")))
+                .andExpect(jsonPath("$.name", is("Vanshika Kesarwani")));
+    }
+
+    @Test
+    @Order(8)
+    void testGoogleLoginWithSnakeCaseIdToken() throws Exception {
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "id_token": "dev-mock:Ankit:ankit@example.com"
+                            }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.email", is("ankit@example.com")));
+    }
+
+    @Test
+    @Order(9)
+    void testProfilePatchAndBioUpdate() throws Exception {
+        // Authenticated user updates profile using PATCH (matching the user's mobile screen)
+        String patchJson = """
+            {
+                "name": "Vanshika Kesarwani",
+                "bio": "Dendrophile"
+            }
+        """;
+
+        mockMvc.perform(patch("/api/users/me")
+                        .header("Authorization", "Bearer " + googleJwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("Vanshika Kesarwani")))
+                .andExpect(jsonPath("$.bio", is("Dendrophile")));
+
+        // Verify GET /api/users/me returns updated bio
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + googleJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("Vanshika Kesarwani")))
+                .andExpect(jsonPath("$.bio", is("Dendrophile")));
+    }
+
+    @Test
+    @Order(10)
+    void testUserLikesEndpoint() throws Exception {
+        mockMvc.perform(get("/api/users/me/likes")
+                        .header("Authorization", "Bearer " + googleJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @Order(11)
+    void testSongSearchEndpoint() throws Exception {
+        mockMvc.perform(get("/api/songs/search")
+                        .param("query", "Sunset"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @Order(12)
+    void testSongRecommendationEndpoint() throws Exception {
+        mockMvc.perform(get("/api/recommendations/song/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
 }

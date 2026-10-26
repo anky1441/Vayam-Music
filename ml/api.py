@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from recommender import (
@@ -7,6 +7,8 @@ from recommender import (
     recommend_by_mood,
     generate_playlist,
 )
+from audio_streamer import get_audio_stream, prewarm_cache
+from test_clip import extract_story_vibe, match_story_songs
 
 app = FastAPI(
     title="Vayam Music ML API",
@@ -102,3 +104,44 @@ def create_playlist(request: PlaylistRequest):
         raise HTTPException(status_code=400, detail=result["error"])
 
     return result
+
+
+@app.get("/audio/stream")
+def stream_audio(title: str, artist: str = ""):
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="Song title is required")
+    res = get_audio_stream(title.strip(), artist.strip())
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+
+@app.on_event("startup")
+def startup_event():
+    sample_tracks = [
+        {"title": "Blinding Lights", "artist": "The Weeknd"},
+        {"title": "Starboy", "artist": "The Weeknd"},
+        {"title": "Shape of You", "artist": "Ed Sheeran"},
+        {"title": "Sweater Weather", "artist": "The Neighbourhood"},
+    ]
+    prewarm_cache(sample_tracks)
+
+@app.post("/storysong/match")
+async def storysong_match(
+    file: UploadFile = File(...),
+    vibe: str = Form(""),
+    number: int = Form(5),
+):
+    #Feature 4
+    try:
+        image_bytes = await file.read()
+        vibe_data = extract_story_vibe(image_bytes, vibe_text=vibe)
+        recommendations = match_story_songs(vibe_data, number=number)
+        return {
+            "feature": "storysong_matcher",
+            "vibe_query": vibe,
+            "atmosphere": vibe_data,
+            "recommendations": recommendations,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"StorySong matching failed: {str(e)}")

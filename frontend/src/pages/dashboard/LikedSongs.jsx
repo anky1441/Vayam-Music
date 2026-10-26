@@ -1,7 +1,9 @@
 
+import { usePlayer } from "../../context/PlayerContext";
 import "./DashboardContent.css";
 
 function LikedSongs({ songs, likedSongs, onToggleLike }) {
+  const { playSong } = usePlayer();
   const liked = songs.filter((song) => likedSongs.includes(song.id));
 
   return (
@@ -21,7 +23,12 @@ function LikedSongs({ songs, likedSongs, onToggleLike }) {
       ) : (
         <div className="dashboard-song-list">
           {liked.map((song) => (
-            <div className="dashboard-song" key={song.id}>
+            <div
+              className="dashboard-song"
+              key={song.id}
+              onClick={() => playSong(song)}
+              style={{ cursor: "pointer" }}
+            >
               <div className={`dashboard-song-art ${song.art}`}>
                 ♫
               </div>
@@ -31,7 +38,10 @@ function LikedSongs({ songs, likedSongs, onToggleLike }) {
               </div>
               <button
                 className="dashboard-heart liked"
-                onClick={() => onToggleLike(song.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLike(song.id);
+                }}
                 aria-label={`Unlike ${song.title}`}
               >
                 ♥

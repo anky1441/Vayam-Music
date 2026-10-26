@@ -1,9 +1,12 @@
 package com.vayam.music.controller;
 
+import com.vayam.music.dto.SongResponse;
+import com.vayam.music.dto.UpdateUserRequest;
 import com.vayam.music.dto.UserResponse;
 import com.vayam.music.model.User;
 import com.vayam.music.repository.UserRepository;
 import com.vayam.music.security.SecurityUtils;
+import com.vayam.music.service.LikeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +18,11 @@ import java.util.List;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserRepository userRepository;
+    private final LikeService likeService;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, LikeService likeService) {
         this.userRepository = userRepository;
+        this.likeService = likeService;
     }
 
     @GetMapping("/me")
@@ -26,6 +31,55 @@ public class UserController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return UserResponse.from(user);
+    }
+
+    @PatchMapping("/me")
+    public UserResponse updateMe(Authentication authentication, @RequestBody(required = false) UpdateUserRequest request) {
+        Long userId = SecurityUtils.getUserId(authentication, userRepository);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (request != null) {
+            if (request.name() != null && !request.name().trim().isBlank()) {
+                user.setName(request.name().trim());
+            }
+            if (request.bio() != null) {
+                user.setBio(request.bio().trim());
+            }
+            if (request.avatarUrl() != null && !request.avatarUrl().trim().isBlank()) {
+                user.setAvatarUrl(request.avatarUrl().trim());
+            }
+        }
+        user = userRepository.save(user);
+        return UserResponse.from(user);
+    }
+
+    @PutMapping("/me")
+    public UserResponse replaceMe(Authentication authentication, @RequestBody(required = false) UpdateUserRequest request) {
+        return updateMe(authentication, request);
+    }
+
+    @PatchMapping("/{id:[0-9]+}")
+    public UserResponse updateById(@PathVariable Long id, Authentication authentication, @RequestBody(required = false) UpdateUserRequest request) {
+        Long currentUserId = SecurityUtils.getUserId(authentication, userRepository);
+        if (!currentUserId.equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own profile");
+        }
+        return updateMe(authentication, request);
+    }
+
+    @PutMapping("/{id:[0-9]+}")
+    public UserResponse replaceById(@PathVariable Long id, Authentication authentication, @RequestBody(required = false) UpdateUserRequest request) {
+        return updateById(id, authentication, request);
+    }
+
+    @GetMapping("/me/likes")
+    public List<SongResponse> myLikes(Authentication authentication) {
+        if (likeService == null) {
+            return List.of();
+        }
+        Long userId = SecurityUtils.getUserId(authentication, userRepository);
+        return likeService.myLikes(userId);
     }
 
     @GetMapping("/{id:[0-9]+}")

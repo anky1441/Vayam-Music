@@ -53,6 +53,21 @@ public class PlaylistService {
         return toResponse(getEntity(id));
     }
 
+    public PlaylistResponse update(Long userId, Long playlistId, CreatePlaylistRequest request) {
+        Playlist playlist = getEntity(playlistId);
+        checkOwner(userId, playlist);
+        if (request != null) {
+            if (request.name() != null && !request.name().trim().isBlank()) {
+                playlist.setName(request.name().trim());
+            }
+            if (request.description() != null) {
+                playlist.setDescription(request.description().trim());
+            }
+        }
+        playlist = playlistRepository.save(playlist);
+        return toResponse(playlist);
+    }
+
     public void addSong(Long userId, Long playlistId, Long songId) {
         Playlist playlist = getEntity(playlistId);
         checkOwner(userId, playlist);

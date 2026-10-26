@@ -1,4 +1,5 @@
-
+import { PlayerProvider } from "./context/PlayerContext";
+import Player from "./components/Player";
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
 
@@ -45,7 +46,17 @@ function App() {
       <Route path="/about" element={<About />} />
       <Route path="/collab" element={<CollabPlaylists />} />
     </Routes>
+    <PlayerProvider>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+      <Player />
+    </PlayerProvider>
   );
 }
+
 
 export default App;

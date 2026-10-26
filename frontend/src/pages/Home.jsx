@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { usePlayer } from "../context/PlayerContext";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -117,6 +120,7 @@ function HomeDiscovery({
     selectedSong,
     currentSong,
 }) {
+    const { playSong } = usePlayer();
     return (
         <>
             <section className="music-welcome">
@@ -416,6 +420,47 @@ function HomeDiscovery({
                                 </div>
                             )}
                         </aside>
+                    <div className="song-grid">
+                        {songs.map((song) => (
+                            <article
+                                className="song-card"
+                                key={song.id}
+                                onClick={() => playSong(song)}
+                                style={{ cursor: "pointer" }}
+                            >
+                                <div className="song-art">
+                                    {song.coverUrl ? (
+                                        <img
+                                            src={song.coverUrl}
+                                            alt={song.title}
+                                            className="song-cover-image"
+                                        />
+                                    ) : (
+                                        <span>♫</span>
+                                    )}
+                                </div>
+
+                                <h3>{song.title}</h3>
+                                <p>{song.artist}</p>
+
+                                <button
+                                    type="button"
+                                    className={`dashboard-heart ${likedSongs.includes(song.id)
+                                            ? "liked"
+                                            : ""
+                                        }`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onLike(song.id);
+                                    }}
+                                    aria-label={`Like ${song.title}`}
+                                >
+                                    {likedSongs.includes(song.id)
+                                        ? "♥"
+                                        : "♡"}
+                                </button>
+                            </article>
+                        ))}
                     </div>
                 )}
             </section>
@@ -452,6 +497,15 @@ function HomeDiscovery({
 }
 
 function PlaylistDetails({ playlist, songs, onBack }) {
+    const { playSong } = usePlayer();
+    const playlistSongIds = Array.isArray(playlist.songs)
+        ? playlist.songs
+        : [];
+
+    const playlistSongs = songs.filter((song) =>
+        playlistSongIds.includes(song.id)
+    );
+
     return (
         <section className="dashboard-view">
             <button
@@ -483,6 +537,13 @@ function PlaylistDetails({ playlist, songs, onBack }) {
                 <div className="dashboard-song-list">
                     {songs.map((song, index) => (
                         <div className="dashboard-song" key={getId(song) ?? index}>
+                    {playlistSongs.map((song) => (
+                        <div
+                            className="dashboard-song"
+                            key={song.id}
+                            onClick={() => playSong(song)}
+                            style={{ cursor: "pointer" }}
+                        >
                             <div className="dashboard-song-art">
                                 {getSongImage(song) ? (
                                     <img
