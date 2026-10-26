@@ -23,17 +23,40 @@ function HomeDiscovery({
     songsError,
     onLike,
     likedSongs,
+    searchQuery = "",
+    onClearSearch,
+    onSelectGenre,
 }) {
     const { playSong } = usePlayer();
     const [selectedMood, setSelectedMood] = useState("");
 
-    const filteredSongs = selectedMood
-        ? songs.filter(
-              (song) =>
-                  song.mood?.toLowerCase().includes(selectedMood.toLowerCase()) ||
-                  song.genre?.toLowerCase().includes(selectedMood.toLowerCase())
-          )
-        : songs;
+    const trimmedQuery = (searchQuery || "").trim().toLowerCase();
+
+    // Combined filter: mood + search text (title, artist, genre, mood)
+    const filteredSongs = songs.filter((song) => {
+        if (selectedMood) {
+            const matchesMood =
+                song.mood?.toLowerCase().includes(selectedMood.toLowerCase()) ||
+                song.genre?.toLowerCase().includes(selectedMood.toLowerCase());
+            if (!matchesMood) return false;
+        }
+
+        if (trimmedQuery) {
+            const title = (song.title || "").toLowerCase();
+            const artist = (song.artist || "").toLowerCase();
+            const genre = (song.genre || "").toLowerCase();
+            const mood = (song.mood || "").toLowerCase();
+
+            return (
+                title.includes(trimmedQuery) ||
+                artist.includes(trimmedQuery) ||
+                genre.includes(trimmedQuery) ||
+                mood.includes(trimmedQuery)
+            );
+        }
+
+        return true;
+    });
 
     return (
         <>
@@ -87,14 +110,23 @@ function HomeDiscovery({
                 </div>
             </section>
 
-            {/* Trending Songs */}
+            {/* Trending Songs / Search Results */}
             <section className="music-section">
                 <div className="music-section-heading">
-                    <h2>Trending Songs {selectedMood && `· ${selectedMood.toUpperCase()}`}</h2>
-                    {selectedMood && (
+                    <h2>
+                        {trimmedQuery
+                            ? `Search Results for "${searchQuery}" (${filteredSongs.length})`
+                            : selectedMood
+                            ? `Trending Songs · ${selectedMood.toUpperCase()}`
+                            : "Trending Songs"}
+                    </h2>
+                    {(selectedMood || trimmedQuery) && (
                         <button
                             type="button"
-                            onClick={() => setSelectedMood("")}
+                            onClick={() => {
+                                setSelectedMood("");
+                                onClearSearch?.();
+                            }}
                             style={{
                                 background: "none",
                                 border: "none",
@@ -103,7 +135,7 @@ function HomeDiscovery({
                                 fontSize: "13px",
                             }}
                         >
-                            Show all
+                            Reset filters
                         </button>
                     )}
                 </div>
@@ -113,7 +145,32 @@ function HomeDiscovery({
                 ) : songsError ? (
                     <p>{songsError}</p>
                 ) : filteredSongs.length === 0 ? (
-                    <p>No songs available right now.</p>
+                    <div style={{ padding: "40px 20px", textAlign: "center", color: "#b9adc9" }}>
+                        <p style={{ fontSize: "16px", color: "#fff", marginBottom: "8px" }}>
+                            No songs found matching "{searchQuery || selectedMood}".
+                        </p>
+                        <p style={{ fontSize: "13px", marginBottom: "16px" }}>
+                            Try searching for another song title, artist name, or genre.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedMood("");
+                                onClearSearch?.();
+                            }}
+                            style={{
+                                background: "rgba(139, 92, 246, 0.2)",
+                                border: "1px solid rgba(139, 92, 246, 0.4)",
+                                color: "#d8b4fe",
+                                borderRadius: "999px",
+                                padding: "8px 20px",
+                                fontSize: "13px",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Show all songs
+                        </button>
+                    </div>
                 ) : (
                     <div className="song-grid">
                         {filteredSongs.map((song) => {
@@ -169,12 +226,16 @@ function HomeDiscovery({
                 </div>
 
                 <div className="genre-list">
-                    <div>Pop</div>
-                    <div>Indie</div>
-                    <div>Lo-fi</div>
-                    <div>Classical</div>
-                    <div>Rock</div>
-                    <div>Instrumental</div>
+                    {["Pop", "Indie", "Lo-fi", "Classical", "Rock", "Instrumental"].map((genre) => (
+                        <div
+                            key={genre}
+                            onClick={() => onSelectGenre?.(genre)}
+                            style={{ cursor: "pointer" }}
+                            title={`Filter by ${genre}`}
+                        >
+                            {genre}
+                        </div>
+                    ))}
                 </div>
             </section>
 
@@ -273,6 +334,17 @@ function Home() {
     const [activeView, setActiveView] = useState(
         location.state?.view || "home"
     );
+
+    // Sync search query from URL parameter if present (?search=xyz)
+    const urlQuery = new URLSearchParams(location.search).get("search") || "";
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+
+    useEffect(() => {
+        const query = new URLSearchParams(location.search).get("search") || "";
+        if (query !== searchQuery) {
+            setSearchQuery(query);
+        }
+    }, [location.search]);
 
     const [songs, setSongs] = useState([]);
     const [songsLoading, setSongsLoading] = useState(true);
@@ -380,6 +452,13 @@ function Home() {
         setSelectedPlaylistId(null);
     }
 
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        if (activeView !== "home") {
+            setActiveView("home");
+        }
+    };
+
     const selectedPlaylist = playlists.find(
         (playlist) => (playlist.id || playlist._id) === selectedPlaylistId
     );
@@ -388,7 +467,12 @@ function Home() {
         <div className="music-home">
             <Navbar
                 onProfileClick={() => openView("profile")}
-                onHomeClick={() => openView("home")}
+                onHomeClick={() => {
+                    openView("home");
+                    setSearchQuery("");
+                }}
+                onSearch={handleSearch}
+                searchQuery={searchQuery}
             />
 
             <div className="music-home-layout">
@@ -458,6 +542,9 @@ function Home() {
                             songsError={songsError}
                             onLike={toggleLike}
                             likedSongs={likedSongs}
+                            searchQuery={searchQuery}
+                            onClearSearch={() => setSearchQuery("")}
+                            onSelectGenre={(genre) => handleSearch(genre)}
                         />
                     )}
 
