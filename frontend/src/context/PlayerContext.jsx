@@ -62,43 +62,35 @@ export function PlayerProvider({ children }) {
             streamUrl = song.audioUrl;
         }
 
-        // 2. Fetch live full stream URL from FastAPI ML backend (if reachable)
+        // 2. Fetch live full stream URL from YouTube streaming engine
         if (!streamUrl) {
-            const isHttps =
-                typeof window !== "undefined" && window.location.protocol === "https:";
-            const isLocalMl =
-                ML_BASE_URL.startsWith("http://localhost") ||
-                ML_BASE_URL.startsWith("http://127.0.0.1");
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                const response = await fetch(
+                    `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
+                        song.title
+                    )}&artist=${encodeURIComponent(song.artist || "")}`,
+                    { signal: controller.signal }
+                );
+                clearTimeout(timeoutId);
 
-            if (!isHttps || !isLocalMl) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-                    const response = await fetch(
-                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
-                            song.title
-                        )}&artist=${encodeURIComponent(song.artist || "")}`,
-                        { signal: controller.signal }
-                    );
-                    clearTimeout(timeoutId);
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.stream_url) {
-                            streamUrl = data.stream_url;
-                        }
-                        if (data.thumbnail && !song.coverUrl) {
-                            setCurrentSong((prev) =>
-                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
-                            );
-                        }
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.stream_url) {
+                        streamUrl = data.stream_url;
                     }
-                } catch (backendErr) {
-                    console.warn(
-                        "ML backend audio stream unavailable, switching to cloud fallback:",
-                        backendErr
-                    );
+                    if (data.thumbnail && !song.coverUrl) {
+                        setCurrentSong((prev) =>
+                            prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                        );
+                    }
                 }
+            } catch (backendErr) {
+                console.warn(
+                    "YouTube streaming engine fetch error:",
+                    backendErr
+                );
             }
         }
 
@@ -130,18 +122,24 @@ export function PlayerProvider({ children }) {
         }
 
         if (!streamUrl) {
-            throw new Error("No playable audio stream found for this song.");
+            throw new Error(`Unable to resolve YouTube audio stream for "${song.title}".`);
         }
 
         audio.src = streamUrl;
-        await audio.play();
-        setIsPlaying(true);
-        } catch (err) {
-            console.error("Playback error:", err);
-            setIsPlaying(false);
-        } finally {
-            setIsLoadingAudio(false);
+        audio.load();
+        try {
+            await audio.play();
+            setIsPlaying(true);
+        } catch (playErr) {
+            console.warn("Direct play error:", playErr);
+            setIsPlaying(!audio.paused);
         }
+    } catch (err) {
+        console.error("Playback error:", err);
+        setIsPlaying(false);
+    } finally {
+        setIsLoadingAudio(false);
+    }
     };
 
     const togglePlay = () => {
