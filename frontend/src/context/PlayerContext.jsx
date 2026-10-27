@@ -1,4 +1,10 @@
 import { createContext, useContext, useState, useRef, useEffect } from "react";
+import { ML_BASE_URL } from "../api/musicApi";
+
+const isSoundEffectUrl = (url) => {
+    if (!url || typeof url !== "string") return false;
+    return url.includes("actions.google.com/sounds") || url.includes("soundhelix.com");
+};
 
 const PlayerContext = createContext();
 
@@ -42,45 +48,97 @@ export function PlayerProvider({ children }) {
 
     // Play a specific song
     const playSong = async (song) => {
-        if (!song) return;
-        const audio = audioRef.current;
+    if (!song) return;
+    const audio = audioRef.current;
 
-        setCurrentSong(song);
-        setIsLoadingAudio(true);
+    setCurrentSong(song);
+    setIsLoadingAudio(true);
 
-        try {
-            let streamUrl = null;
+    try {
+        let streamUrl = null;
 
-            // 1. Fetch live stream URL from our FastAPI ML backend
+        // 1. If song already has a direct valid audio stream that is NOT a placeholder sound effect, use it!
+        if (song.audioUrl && !isSoundEffectUrl(song.audioUrl)) {
+            streamUrl = song.audioUrl;
+        }
+
+        // 2. Fetch live full stream URL from FastAPI ML backend (if reachable)
+        if (!streamUrl) {
+            const isHttps =
+                typeof window !== "undefined" && window.location.protocol === "https:";
+            const isLocalMl =
+                ML_BASE_URL.startsWith("http://localhost") ||
+                ML_BASE_URL.startsWith("http://127.0.0.1");
+
+            if (!isHttps || !isLocalMl) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    const response = await fetch(
+                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
+                            song.title
+                        )}&artist=${encodeURIComponent(song.artist || "")}`,
+                        { signal: controller.signal }
+                    );
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.stream_url) {
+                            streamUrl = data.stream_url;
+                        }
+                        if (data.thumbnail && !song.coverUrl) {
+                            setCurrentSong((prev) =>
+                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                            );
+                        }
+                    }
+                } catch (backendErr) {
+                    console.warn(
+                        "ML backend audio stream unavailable, switching to cloud fallback:",
+                        backendErr
+                    );
+                }
+            }
+        }
+
+        // 3. Cloud Fallback: Resolve real audio stream & HD cover from open public music catalog
+        if (!streamUrl) {
             try {
-                const response = await fetch(
-                    `http://localhost:8000/audio/stream?title=${encodeURIComponent(
-                        song.title
-                    )}&artist=${encodeURIComponent(song.artist || "")}`
+                const queryTerm = encodeURIComponent(
+                    `${song.title} ${song.artist || ""}`.trim()
                 );
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.stream_url) {
-                        streamUrl = data.stream_url;
+                const catRes = await fetch(
+                    `https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`
+                );
+                if (catRes.ok) {
+                    const catData = await catRes.json();
+                    const hit = catData.results?.[0];
+                    if (hit?.previewUrl) {
+                        streamUrl = hit.previewUrl;
+                        if (!song.coverUrl && hit.artworkUrl100) {
+                            const cover = hit.artworkUrl100.replace(
+                                "100x100bb",
+                                "600x600bb"
+                            );
+                            setCurrentSong((prev) =>
+                                prev ? { ...prev, coverUrl: cover } : prev
+                            );
+                        }
                     }
                 }
-            } catch (backendErr) {
-                console.warn("FastAPI backend error, checking fallback:", backendErr);
+            } catch (catErr) {
+                console.warn("Public catalog audio stream fallback failed:", catErr);
             }
+        }
 
-            // 2. Fallback to song.audioUrl if backend stream is not available
-            if (!streamUrl && song.audioUrl) {
-                streamUrl = song.audioUrl;
-            }
+        if (!streamUrl) {
+            throw new Error("No playable audio stream found for this song.");
+        }
 
-            if (!streamUrl) {
-                throw new Error("No playable audio stream found for this song.");
-            }
-
-            audio.src = streamUrl;
-            await audio.play();
-            setIsPlaying(true);
+        audio.src = streamUrl;
+        await audio.play();
+        setIsPlaying(true);
         } catch (err) {
             console.error("Playback error:", err);
             setIsPlaying(false);

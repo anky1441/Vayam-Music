@@ -147,6 +147,49 @@ async def storysong_match(
         raise HTTPException(status_code=500, detail=f"StorySong matching failed: {str(e)}")
 
 
+import concurrent.futures
+import json
+import urllib.parse
+import urllib.request
+
+_ARTWORK_CACHE = {}
+
+
+def fetch_track_artwork(title: str, artist: str) -> str:
+    """Fetch high-res album artwork from Apple Music/iTunes catalog with caching."""
+    clean_title = (title or "").strip()
+    clean_artist = (artist or "").strip()
+    cache_key = f"{clean_title.lower()}_{clean_artist.lower()}"
+
+    if cache_key in _ARTWORK_CACHE:
+        return _ARTWORK_CACHE[cache_key]
+
+    # Primary query: track title + artist
+    search_queries = [
+        f"{clean_title} {clean_artist}".strip(),
+        clean_title,
+    ]
+
+    for term in search_queries:
+        if not term:
+            continue
+        try:
+            url = f"https://itunes.apple.com/search?term={urllib.parse.quote(term)}&entity=song&limit=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                results = data.get("results", [])
+                if results and "artworkUrl100" in results[0]:
+                    art_url = results[0]["artworkUrl100"].replace("100x100bb", "600x600bb")
+                    _ARTWORK_CACHE[cache_key] = art_url
+                    return art_url
+        except Exception:
+            continue
+
+    _ARTWORK_CACHE[cache_key] = ""
+    return ""
+
+
 @app.get("/songs/search")
 def search_catalog_songs(query: str, limit: int = 10):
     if not query or not query.strip():
@@ -201,4 +244,20 @@ def search_catalog_songs(query: str, limit: int = 10):
         except Exception:
             pass
 
+    # 3. Resolve HD album artwork in parallel for dataset matches that lack a coverUrl
+    tracks_to_fetch = [r for r in results[:limit] if not r.get("coverUrl")]
+    if tracks_to_fetch:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(tracks_to_fetch))) as executor:
+            future_to_track = {
+                executor.submit(fetch_track_artwork, r["title"], r["artist"]): r
+                for r in tracks_to_fetch
+            }
+            for future in concurrent.futures.as_completed(future_to_track):
+                track = future_to_track[future]
+                try:
+                    track["coverUrl"] = future.result()
+                except Exception:
+                    pass
+
     return results[:limit]
+

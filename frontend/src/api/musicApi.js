@@ -157,17 +157,61 @@ export const matchStorySong = async (formData) => {
   return response.json();
 };
 
-/** GET /songs/search - Searches 114,000+ Spotify dataset & music catalog in ML backend */
+/** GET /songs/search - Searches catalog via ML backend with automatic cloud catalog fallback for production */
 export const searchCatalogSongs = async (query, limit = 8) => {
   if (!query || !query.trim()) return [];
-  try {
-    const response = await fetch(
-      `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(query.trim())}&limit=${limit}`
-    );
-    if (!response.ok) return [];
-    return response.json();
-  } catch (err) {
-    console.warn("Catalog search fallback:", err);
-    return [];
+  const q = query.trim();
+
+  // 1. Try local or deployed ML backend if not blocked by mixed-content
+  const isHttps =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+  const isLocalMl =
+    ML_BASE_URL.startsWith("http://localhost") ||
+    ML_BASE_URL.startsWith("http://127.0.0.1");
+
+  if (!isHttps || !isLocalMl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const response = await fetch(
+        `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(q)}&limit=${limit}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      }
+    } catch {
+      // Continue to cloud fallback
+    }
   }
+
+  // 2. Cloud Fallback: Direct public music catalog via Apple iTunes Search API (100% HTTPS & CORS-friendly)
+  try {
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=${limit}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const results = (data.results || []).map((item) => ({
+        id: `itunes_${item.trackId}`,
+        title: item.trackName,
+        artist: item.artistName,
+        genre: item.primaryGenreName || "Pop",
+        popularity: 80,
+        coverUrl: item.artworkUrl100
+          ? item.artworkUrl100.replace("100x100bb", "600x600bb")
+          : "",
+        audioUrl: item.previewUrl || "",
+      }));
+      return results;
+    }
+  } catch (err) {
+    console.warn("Catalog cloud search fallback error:", err);
+  }
+
+  return [];
 };
