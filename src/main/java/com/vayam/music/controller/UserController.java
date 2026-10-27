@@ -1,5 +1,6 @@
 package com.vayam.music.controller;
 
+import com.vayam.music.dto.PlaylistResponse;
 import com.vayam.music.dto.SongResponse;
 import com.vayam.music.dto.UpdateUserRequest;
 import com.vayam.music.dto.UserResponse;
@@ -7,6 +8,7 @@ import com.vayam.music.model.User;
 import com.vayam.music.repository.UserRepository;
 import com.vayam.music.security.SecurityUtils;
 import com.vayam.music.service.LikeService;
+import com.vayam.music.service.PlaylistService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +21,12 @@ import java.util.List;
 public class UserController {
     private final UserRepository userRepository;
     private final LikeService likeService;
+    private final PlaylistService playlistService;
 
-    public UserController(UserRepository userRepository, LikeService likeService) {
+    public UserController(UserRepository userRepository, LikeService likeService, PlaylistService playlistService) {
         this.userRepository = userRepository;
         this.likeService = likeService;
+        this.playlistService = playlistService;
     }
 
     @GetMapping("/me")
@@ -80,6 +84,23 @@ public class UserController {
         }
         Long userId = SecurityUtils.getUserId(authentication, userRepository);
         return likeService.myLikes(userId);
+    }
+
+    @GetMapping("/me/playlists")
+    public List<PlaylistResponse> myPlaylists(Authentication authentication) {
+        if (playlistService == null) {
+            return List.of();
+        }
+        Long userId = SecurityUtils.getUserId(authentication, userRepository);
+        return playlistService.myPlaylists(userId);
+    }
+
+    @GetMapping("/{id:[0-9]+}/playlists")
+    public List<PlaylistResponse> userPlaylists(@PathVariable Long id) {
+        if (playlistService == null) {
+            return List.of();
+        }
+        return playlistService.myPlaylists(id);
     }
 
     @GetMapping("/{id:[0-9]+}")
