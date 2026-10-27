@@ -163,22 +163,29 @@ export const searchCatalogSongs = async (query, limit = 8) => {
   const q = query.trim();
 
   // 1. Try local or deployed ML backend
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const response = await fetch(
-      `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(q)}&limit=${limit}`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeoutId);
-    if (response.ok) {
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data;
+  const isMixedContent =
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    ML_BASE_URL.startsWith("http://");
+
+  if (!isMixedContent) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(
+        `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(q)}&limit=${limit}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
       }
+    } catch {
+      // Continue to cloud fallback
     }
-  } catch {
-    // Continue to cloud fallback
   }
 
   // 2. Cloud Fallback: Direct public music catalog via Apple iTunes Search API (100% HTTPS & CORS-friendly)

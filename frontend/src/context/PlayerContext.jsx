@@ -64,38 +64,46 @@ export function PlayerProvider({ children }) {
 
         // 2. Fetch live full stream URL from YouTube streaming engine
         if (!streamUrl) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-                const response = await fetch(
-                    `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
-                        song.title
-                    )}&artist=${encodeURIComponent(song.artist || "")}`,
-                    { signal: controller.signal }
-                );
-                clearTimeout(timeoutId);
+            const isMixedContent =
+                typeof window !== "undefined" &&
+                window.location.protocol === "https:" &&
+                ML_BASE_URL.startsWith("http://");
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.stream_url) {
-                        streamUrl = data.stream_url;
+            if (!isMixedContent) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    const response = await fetch(
+                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
+                            song.title
+                        )}&artist=${encodeURIComponent(song.artist || "")}`,
+                        { signal: controller.signal }
+                    );
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.stream_url) {
+                            streamUrl = data.stream_url;
+                        }
+                        if (data.thumbnail && !song.coverUrl) {
+                            setCurrentSong((prev) =>
+                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                            );
+                        }
                     }
-                    if (data.thumbnail && !song.coverUrl) {
-                        setCurrentSong((prev) =>
-                            prev ? { ...prev, coverUrl: data.thumbnail } : prev
-                        );
-                    }
+                } catch (backendErr) {
+                    console.warn(
+                        "YouTube streaming engine fetch error:",
+                        backendErr
+                    );
                 }
-            } catch (backendErr) {
-                console.warn(
-                    "YouTube streaming engine fetch error:",
-                    backendErr
-                );
             }
         }
 
-        // 3. Fallback for HD cover art only if missing (never use preview audio)
-        if (!song.coverUrl) {
+        // 3. Fallback: If YouTube stream is unreachable (e.g. remote visitor on live site or ML server offline),
+        // resolve HD cover & public catalog audio stream so music ALWAYS plays for normal visitors
+        if (!streamUrl || !song.coverUrl) {
             try {
                 const queryTerm = encodeURIComponent(
                     `${song.title} ${song.artist || ""}`.trim()
@@ -106,7 +114,10 @@ export function PlayerProvider({ children }) {
                 if (catRes.ok) {
                     const catData = await catRes.json();
                     const hit = catData.results?.[0];
-                    if (hit?.artworkUrl100) {
+                    if (!streamUrl && hit?.previewUrl) {
+                        streamUrl = hit.previewUrl;
+                    }
+                    if (!song.coverUrl && hit?.artworkUrl100) {
                         const cover = hit.artworkUrl100.replace(
                             "100x100bb",
                             "600x600bb"
@@ -117,12 +128,12 @@ export function PlayerProvider({ children }) {
                     }
                 }
             } catch (catErr) {
-                // Ignore cover art fallback errors
+                console.warn("Catalog audio stream fallback failed:", catErr);
             }
         }
 
         if (!streamUrl) {
-            throw new Error(`Unable to resolve YouTube audio stream for "${song.title}".`);
+            throw new Error(`Unable to resolve playable audio stream for "${song.title}".`);
         }
 
         audio.src = streamUrl;
