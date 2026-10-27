@@ -29,7 +29,8 @@ import "./Discover.css";
 // One playlist: songs, editing, deleting and (for shared playlists) members.
 // Used inside the Home shell and on the /collab/:id page.
 function PlaylistDetails({
-  playlistId,
+  playlistId: passedId,
+  playlist: initialPlaylist,
   onBack,
   backLabel = "← My Playlists",
   onChanged,
@@ -38,11 +39,16 @@ function PlaylistDetails({
   isLiked,
   onToggleLike,
 }) {
-  const [playlist, setPlaylist] = useState(null);
-  const [songs, setSongs] = useState([]);
+  const playlistId = passedId || initialPlaylist?.id || initialPlaylist?._id;
+  const [playlist, setPlaylist] = useState(initialPlaylist || null);
+  const [songs, setSongs] = useState(
+    Array.isArray(initialPlaylist?.songs)
+      ? initialPlaylist.songs.map(unwrapSong)
+      : []
+  );
   const [members, setMembers] = useState([]);
   const [me, setMe] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialPlaylist);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -60,6 +66,7 @@ function PlaylistDetails({
   const [memberBusy, setMemberBusy] = useState(false);
 
   const loadMembers = useCallback(async () => {
+    if (!playlistId) return;
     try {
       const response = await getPlaylistMembers(playlistId);
       setMembers(toList(response.data));
@@ -72,23 +79,60 @@ function PlaylistDetails({
     let active = true;
 
     async function load() {
+      if (!playlistId) {
+        if (initialPlaylist) {
+          setPlaylist(initialPlaylist);
+          setSongs(
+            Array.isArray(initialPlaylist.songs)
+              ? initialPlaylist.songs.map(unwrapSong)
+              : []
+          );
+          setLoading(false);
+        } else {
+          setError("Playlist not found.");
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
       setError("");
 
       try {
         const [playlistRes, songsRes, meRes] = await Promise.all([
-          getPlaylistById(playlistId),
-          getPlaylistSongs(playlistId),
+          getPlaylistById(playlistId).catch(() => null),
+          getPlaylistSongs(playlistId).catch(() => null),
           getCurrentUser().catch(() => null),
         ]);
         if (!active) return;
 
-        setPlaylist(playlistRes.data?.playlist ?? playlistRes.data);
-        setSongs(toList(songsRes.data).map(unwrapSong));
+        if (playlistRes?.data) {
+          setPlaylist(playlistRes.data?.playlist ?? playlistRes.data);
+        } else if (initialPlaylist) {
+          setPlaylist(initialPlaylist);
+        }
+
+        if (songsRes?.data) {
+          setSongs(toList(songsRes.data).map(unwrapSong));
+        } else if (initialPlaylist?.songs) {
+          setSongs(initialPlaylist.songs.map(unwrapSong));
+        }
+
         setMe(meRes ? getUser(meRes) : null);
         await loadMembers();
       } catch (requestError) {
-        if (active) setError(getApiErrorMessage(requestError, "Could not load this playlist."));
+        if (active) {
+          if (initialPlaylist) {
+            setPlaylist(initialPlaylist);
+            setSongs(
+              Array.isArray(initialPlaylist.songs)
+                ? initialPlaylist.songs.map(unwrapSong)
+                : []
+            );
+          } else {
+            setError(getApiErrorMessage(requestError, "Could not load this playlist."));
+          }
+        }
       } finally {
         if (active) setLoading(false);
       }

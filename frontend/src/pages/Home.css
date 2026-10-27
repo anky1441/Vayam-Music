@@ -311,6 +311,7 @@
 .song-card:hover {
   background: #24182f;
   border-color: rgba(196, 161, 255, 0.18);
+  transform: translateY(-2px);
 }
 
 .song-art {
@@ -322,6 +323,44 @@
   color: rgba(255, 255, 255, 0.9);
   font-size: 48px;
   box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+  background: #130d1b;
+}
+
+.song-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 11px;
+  display: block;
+}
+
+.song-art-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  padding-left: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.song-card:hover .song-art-play {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .song-art-one {

@@ -102,8 +102,8 @@ export function PlayerProvider({ children }) {
             }
         }
 
-        // 3. Cloud Fallback: Resolve real audio stream & HD cover from open public music catalog
-        if (!streamUrl) {
+        // 3. Fallback for HD cover art only if missing (never use preview audio)
+        if (!song.coverUrl) {
             try {
                 const queryTerm = encodeURIComponent(
                     `${song.title} ${song.artist || ""}`.trim()
@@ -114,21 +114,18 @@ export function PlayerProvider({ children }) {
                 if (catRes.ok) {
                     const catData = await catRes.json();
                     const hit = catData.results?.[0];
-                    if (hit?.previewUrl) {
-                        streamUrl = hit.previewUrl;
-                        if (!song.coverUrl && hit.artworkUrl100) {
-                            const cover = hit.artworkUrl100.replace(
-                                "100x100bb",
-                                "600x600bb"
-                            );
-                            setCurrentSong((prev) =>
-                                prev ? { ...prev, coverUrl: cover } : prev
-                            );
-                        }
+                    if (hit?.artworkUrl100) {
+                        const cover = hit.artworkUrl100.replace(
+                            "100x100bb",
+                            "600x600bb"
+                        );
+                        setCurrentSong((prev) =>
+                            prev ? { ...prev, coverUrl: cover } : prev
+                        );
                     }
                 }
             } catch (catErr) {
-                console.warn("Public catalog audio stream fallback failed:", catErr);
+                // Ignore cover art fallback errors
             }
         }
 

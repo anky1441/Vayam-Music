@@ -4,7 +4,7 @@ import SongRow from "../../components/SongRow";
 import { sameId } from "../../utils/music";
 import "./DashboardContent.css";
 
-function CreatePlaylist({ songs, onCreatePlaylist }) {
+function CreatePlaylist({ songs = [], onCreatePlaylist }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
@@ -12,8 +12,9 @@ function CreatePlaylist({ songs, onCreatePlaylist }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const filteredSongs = songs.filter((song) =>
-    `${song.title} ${song.artist}`.toLowerCase().includes(search.toLowerCase())
+  const songList = Array.isArray(songs) ? songs : [];
+  const filteredSongs = songList.filter((song) =>
+    `${song?.title || ""} ${song?.artist || ""}`.toLowerCase().includes(search.toLowerCase())
   );
 
   function toggleSong(id) {

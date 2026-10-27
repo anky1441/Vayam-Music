@@ -133,18 +133,7 @@ function Profile({ playlists = [], onSelectPlaylist }) {
     );
   }
 
-  if (loadError) {
-    return (
-      <section className="profile-view">
-        <p className="dashboard-subtitle" role="alert">{loadError}</p>
-        <button className="profile-logout-button" onClick={handleLogout}>
-          <span aria-hidden="true">↪</span> Logout
-        </button>
-      </section>
-    );
-  }
-
-  const displayName = name || "Music Lover";
+  const displayName = name || (email ? email.split("@")[0] : "Music Lover");
 
   return (
     <section className="profile-view">

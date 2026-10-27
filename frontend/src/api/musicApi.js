@@ -205,7 +205,7 @@ export const searchCatalogSongs = async (query, limit = 8) => {
         coverUrl: item.artworkUrl100
           ? item.artworkUrl100.replace("100x100bb", "600x600bb")
           : "",
-        audioUrl: item.previewUrl || "",
+        audioUrl: "",
       }));
       return results;
     }

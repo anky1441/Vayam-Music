@@ -2,16 +2,30 @@ import SongRow from "../../components/SongRow";
 import { getSongId, sameId, unwrapSong } from "../../utils/music";
 import "./DashboardContent.css";
 
-// `likedItems` comes from GET /users/me/likes. If the backend only returns
-// { songId } records, the full song is looked up in the `songs` list.
-function LikedSongs({ likedItems, songs, onToggleLike, onOpenSong }) {
-  const liked = likedItems
+// `likedItems` or `likedSongs` comes from parent. If the backend only returns
+// { songId } records or IDs, the full song is looked up in the `songs` list.
+function LikedSongs({ likedItems, likedSongs, songs = [], onToggleLike, onOpenSong, onPlaySong }) {
+  const rawItems = Array.isArray(likedItems)
+    ? likedItems
+    : Array.isArray(likedSongs)
+    ? likedSongs
+    : [];
+  const songList = Array.isArray(songs) ? songs : [];
+
+  const liked = rawItems
     .map((item) => {
-      const song = unwrapSong(item);
-      if (song?.title) return song;
-      return songs.find((candidate) => sameId(candidate.id, getSongId(item)));
+      if (!item) return null;
+      if (typeof item === "object" && item.title) return item;
+      const id = typeof item === "object" ? getSongId(item) : item;
+      const found = songList.find(
+        (candidate) => sameId(candidate.id, id) || String(candidate.id) === String(id)
+      );
+      if (found) return found;
+      return typeof item === "object" ? item : null;
     })
     .filter(Boolean);
+
+  const handlePlay = onPlaySong || onOpenSong;
 
   return (
     <section className="dashboard-view">
@@ -31,11 +45,11 @@ function LikedSongs({ likedItems, songs, onToggleLike, onOpenSong }) {
         <div className="dashboard-song-list">
           {liked.map((song) => (
             <SongRow
-              key={song.id}
+              key={song.id || song._id || song.title}
               song={song}
               liked
-              onToggleLike={onToggleLike}
-              onOpen={onOpenSong}
+              onToggleLike={() => onToggleLike?.(song.id || song._id)}
+              onOpen={handlePlay ? () => handlePlay(song) : undefined}
             />
           ))}
         </div>

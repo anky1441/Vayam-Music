@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import Navbar from "../components/Navbar";
 import "./About.css";
 
 const features = [
@@ -39,6 +40,7 @@ export default function About() {
 
   return (
     <div className="about-page">
+      <Navbar />
       <section className="about-hero">
         <span className="about-label">ABOUT VAYAM</span>
         <h1>Your mood. Your music.</h1>

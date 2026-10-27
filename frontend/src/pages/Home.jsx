@@ -588,13 +588,16 @@ function Home() {
                         <LikedSongs
                             songs={songs}
                             likedSongs={likedSongs}
+                            likedItems={likedSongs}
                             onToggleLike={toggleLike}
+                            onPlaySong={playSong}
                         />
                     )}
 
                     {activeView === "playlists" && (
                         <MyPlaylists
                             playlists={playlists}
+                            onCreate={() => openView("create")}
                             onSelectPlaylist={(id) => {
                                 setSelectedPlaylistId(id);
                                 setActiveView("playlist-details");
@@ -609,16 +612,18 @@ function Home() {
                         />
                     )}
 
-                    {activeView === "playlist-details" && selectedPlaylist && (
+                    {activeView === "playlist-details" && (
                         <PlaylistDetails
                             playlist={selectedPlaylist}
+                            playlistId={selectedPlaylistId || selectedPlaylist?.id}
                             songs={songs}
                             onBack={() => openView("playlists")}
+                            onOpenSong={playSong}
                         />
                     )}
 
                     {/* Additional Feature: Collaborative Playlists */}
-                    {activeView === "collab" && <CollabPlaylists />}
+                    {activeView === "collab" && <CollabPlaylists isEmbedded />}
 
                     {/* Additional Feature: AI StorySong */}
                     {activeView === "storysong" && (

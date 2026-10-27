@@ -50,7 +50,7 @@ function AvatarStack({ members }) {
   );
 }
 
-export default function CollabPlaylists() {
+export default function CollabPlaylists({ isEmbedded = false }) {
   const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
@@ -150,10 +150,8 @@ export default function CollabPlaylists() {
     { key: "shared", label: "Shared with me" },
   ];
 
-  return (
-    <div className="music-home">
-      <Navbar />
-      <div className="cp-page">
+  const pageContent = (
+    <div className="cp-page">
       {/* Header */}
       <div className="cp-header">
         <div>
@@ -288,7 +286,17 @@ export default function CollabPlaylists() {
           </form>
         </div>
       )}
-      </div>
+    </div>
+  );
+
+  if (isEmbedded) {
+    return pageContent;
+  }
+
+  return (
+    <div className="music-home">
+      <Navbar />
+      {pageContent}
     </div>
   );
 }
