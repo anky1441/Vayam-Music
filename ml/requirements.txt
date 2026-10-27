@@ -6,3 +6,9 @@ numpy
 scikit-learn
 scipy
 joblib
+yt-dlp[default]
+python-dotenv
+pillow
+Pillow
+requests
+python-multipart

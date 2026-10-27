@@ -145,3 +145,60 @@ async def storysong_match(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"StorySong matching failed: {str(e)}")
+
+
+@app.get("/songs/search")
+def search_catalog_songs(query: str, limit: int = 10):
+    if not query or not query.strip():
+        return []
+
+    q = query.strip()
+    from test_clip import songs
+
+    # 1. Search in-memory 114k Spotify dataset
+    mask = songs["track_name"].str.contains(q, case=False, na=False) | songs["artists"].str.contains(q, case=False, na=False)
+    matches = (
+        songs[mask]
+        .drop_duplicates(subset=["track_name", "artists"])
+        .sort_values(by="popularity", ascending=False)
+        .head(limit)
+    )
+
+    results = []
+    for _, row in matches.iterrows():
+        results.append({
+            "id": f"ds_{row['track_name']}_{row['artists']}",
+            "title": str(row["track_name"]),
+            "artist": str(row["artists"]),
+            "genre": str(row.get("track_genre", "Pop")),
+            "popularity": int(row.get("popularity", 50)),
+            "coverUrl": "",
+            "audioUrl": "",
+        })
+
+    # 2. If fewer than 2 results found in dataset, search YouTube in background via yt-dlp flat extract
+    if len(results) < 2:
+        try:
+            import yt_dlp
+            ydl_opts = {"quiet": True, "extract_flat": True, "skip_download": True}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                yt_res = ydl.extract_info(f"ytsearch{limit}:{q} audio", download=False)
+                for entry in yt_res.get("entries", []):
+                    title = entry.get("title") or ""
+                    uploader = entry.get("uploader") or entry.get("channel") or ""
+                    thumbnails = entry.get("thumbnails")
+                    thumb_url = thumbnails[-1].get("url") if thumbnails else ""
+                    if title:
+                        results.append({
+                            "id": f"yt_{entry.get('id', title)}",
+                            "title": title,
+                            "artist": uploader,
+                            "genre": "Live Stream",
+                            "popularity": 75,
+                            "coverUrl": thumb_url,
+                            "audioUrl": "",
+                        })
+        except Exception:
+            pass
+
+    return results[:limit]

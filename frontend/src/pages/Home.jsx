@@ -1,48 +1,76 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { usePlayer } from "../context/PlayerContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SongCard from "../components/SongCard";
 
 import LikedSongs from "./dashboard/LikedSongs.jsx";
 import MyPlaylists from "./dashboard/MyPlaylists.jsx";
 import CreatePlaylist from "./dashboard/CreatePlaylists.jsx";
 import Profile from "./dashboard/Profile.jsx";
-import Moods from "./dashboard/Moods.jsx";
-import Search from "./dashboard/Search.jsx";
-import Recommendations from "./dashboard/Recommendations.jsx";
-import SongDetails from "./dashboard/SongDetails.jsx";
-import PlaylistGenerator from "./dashboard/PlaylistGenerator.jsx";
+import CollabPlaylists from "./CollabPlaylists.jsx";
 import StorySong from "./dashboard/StorySong.jsx";
-import PlaylistDetails from "./dashboard/PlaylistDetails.jsx";
 
-import { getSongs } from "../api/musicApi";
-import useLibrary from "../hooks/useLibrary";
-import { toList, unwrapSong } from "../utils/music";
+import { getSongs, getLikedSongs, getUserPlaylists, searchCatalogSongs } from "../api/musicApi";
+import { isAuthenticated } from "../api/api";
 
 import "./Home.css";
 import "./dashboard/DashboardContent.css";
-import "./dashboard/Discover.css";
-
-const HOME_MOODS = [
-    { key: "chill", icon: "☾", label: "Chill Vibes", className: "mood-chill" },
-    { key: "energetic", icon: "ϟ", label: "Energy Boost", className: "mood-energy" },
-    { key: "romantic", icon: "♡", label: "Romantic", className: "mood-romantic" },
-    { key: "focus", icon: "✦", label: "Deep Focus", className: "mood-focus" },
-];
 
 function HomeDiscovery({
     songs,
     songsLoading,
     songsError,
-    isLiked,
-    onToggleLike,
-    onOpenSong,
-    onSelectMood,
-    onOpenMoods,
-    onOpenForYou,
-    onOpenCreate,
+    onLike,
+    likedSongs,
+    searchQuery = "",
+    catalogSongs = [],
+    onClearSearch,
+    onSelectGenre,
 }) {
+    const { playSong } = usePlayer();
+    const [selectedMood, setSelectedMood] = useState("");
+
+    const trimmedQuery = (searchQuery || "").trim().toLowerCase();
+
+    // Combined filter: mood + search text (title, artist, genre, mood)
+    const filteredSongs = songs.filter((song) => {
+        if (selectedMood) {
+            const matchesMood =
+                song.mood?.toLowerCase().includes(selectedMood.toLowerCase()) ||
+                song.genre?.toLowerCase().includes(selectedMood.toLowerCase());
+            if (!matchesMood) return false;
+        }
+
+        if (trimmedQuery) {
+            const title = (song.title || "").toLowerCase();
+            const artist = (song.artist || "").toLowerCase();
+            const genre = (song.genre || "").toLowerCase();
+            const mood = (song.mood || "").toLowerCase();
+
+            return (
+                title.includes(trimmedQuery) ||
+                artist.includes(trimmedQuery) ||
+                genre.includes(trimmedQuery) ||
+                mood.includes(trimmedQuery)
+            );
+        }
+
+        return true;
+    });
+
+    // Merge filtered database songs with matching catalog songs from the 114k Spotify dataset
+    const seen = new Set();
+    const displaySongs = [];
+
+    for (const song of [...filteredSongs, ...(catalogSongs || [])]) {
+        const key = `${(song.title || "").toLowerCase().trim()}_${(song.artist || "").toLowerCase().trim()}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            displaySongs.push(song);
+        }
+    }
+
     return (
         <>
             {/* Welcome Section */}
@@ -54,52 +82,152 @@ function HomeDiscovery({
 
             {/* Mood Section */}
             <section className="music-section">
-                <div className="music-section-heading">
-                    <h2>Explore Your Mood</h2>
-                    <span onClick={onOpenMoods}>All moods →</span>
-                </div>
+                <h2>Explore Your Mood</h2>
 
                 <div className="mood-grid">
-                    {HOME_MOODS.map((mood) => (
-                        <button
-                            type="button"
-                            key={mood.key}
-                            className={`mood-card mood-card-button ${mood.className}`}
-                            onClick={() => onSelectMood(mood.key)}
-                        >
-                            <span>{mood.icon}</span>
-                            <h3>{mood.label}</h3>
-                        </button>
-                    ))}
+                    <div
+                        className={`mood-card mood-chill ${selectedMood === "chill" ? "active" : ""}`}
+                        onClick={() => setSelectedMood(selectedMood === "chill" ? "" : "chill")}
+                        style={{ cursor: "pointer" }}
+                    >
+                        <span>☾</span>
+                        <h3>Chill Vibes</h3>
+                    </div>
+
+                    <div
+                        className={`mood-card mood-energy ${selectedMood === "energy" ? "active" : ""}`}
+                        onClick={() => setSelectedMood(selectedMood === "energy" ? "" : "energy")}
+                        style={{ cursor: "pointer" }}
+                    >
+                        <span>ϟ</span>
+                        <h3>Energy Boost</h3>
+                    </div>
+
+                    <div
+                        className={`mood-card mood-romantic ${selectedMood === "romantic" ? "active" : ""}`}
+                        onClick={() => setSelectedMood(selectedMood === "romantic" ? "" : "romantic")}
+                        style={{ cursor: "pointer" }}
+                    >
+                        <span>♡</span>
+                        <h3>Romantic</h3>
+                    </div>
+
+                    <div
+                        className={`mood-card mood-focus ${selectedMood === "focus" ? "active" : ""}`}
+                        onClick={() => setSelectedMood(selectedMood === "focus" ? "" : "focus")}
+                        style={{ cursor: "pointer" }}
+                    >
+                        <span>✦</span>
+                        <h3>Deep Focus</h3>
+                    </div>
                 </div>
             </section>
 
-            {/* Trending Songs */}
+            {/* Trending Songs / Search Results */}
             <section className="music-section">
                 <div className="music-section-heading">
-                    <h2>Trending Songs</h2>
-                    <span onClick={onOpenForYou}>Discover more →</span>
+                    <h2>
+                        {trimmedQuery
+                            ? `Search Results for "${searchQuery}" (${displaySongs.length})`
+                            : selectedMood
+                            ? `Trending Songs · ${selectedMood.toUpperCase()}`
+                            : "Trending Songs"}
+                    </h2>
+                    {(selectedMood || trimmedQuery) && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedMood("");
+                                onClearSearch?.();
+                            }}
+                            style={{
+                                background: "none",
+                                border: "none",
+                                color: "#c4a1ff",
+                                cursor: "pointer",
+                                fontSize: "13px",
+                            }}
+                        >
+                            Reset filters
+                        </button>
+                    )}
                 </div>
 
                 {songsLoading ? (
-                    <div className="song-grid">
-                        {[1, 2, 3, 4].map((n) => <div key={n} className="dv-skeleton" />)}
-                    </div>
+                    <p>Loading songs...</p>
                 ) : songsError ? (
-                    <p className="dv-error" role="alert">{songsError}</p>
-                ) : songs.length === 0 ? (
-                    <p>No songs available right now.</p>
+                    <p>{songsError}</p>
+                ) : displaySongs.length === 0 ? (
+                    <div style={{ padding: "40px 20px", textAlign: "center", color: "#b9adc9" }}>
+                        <p style={{ fontSize: "16px", color: "#fff", marginBottom: "8px" }}>
+                            No songs found matching "{searchQuery || selectedMood}".
+                        </p>
+                        <p style={{ fontSize: "13px", marginBottom: "16px" }}>
+                            Try searching for another song title, artist name, or genre.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedMood("");
+                                onClearSearch?.();
+                            }}
+                            style={{
+                                background: "rgba(139, 92, 246, 0.2)",
+                                border: "1px solid rgba(139, 92, 246, 0.4)",
+                                color: "#d8b4fe",
+                                borderRadius: "999px",
+                                padding: "8px 20px",
+                                fontSize: "13px",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Show all songs
+                        </button>
+                    </div>
                 ) : (
                     <div className="song-grid">
-                        {songs.slice(0, 8).map((song) => (
-                            <SongCard
-                                key={song.id}
-                                song={song}
-                                liked={isLiked(song.id)}
-                                onToggleLike={onToggleLike}
-                                onOpen={onOpenSong}
-                            />
-                        ))}
+                        {displaySongs.map((song) => {
+                            const songId = song.id || song._id;
+                            const isLiked = likedSongs.some(
+                                (id) => String(id) === String(songId)
+                            );
+                            return (
+                                <article
+                                    className="song-card"
+                                    key={songId}
+                                    onClick={() => playSong(song)}
+                                    style={{ cursor: "pointer" }}
+                                >
+                                    <div className="song-art">
+                                        {song.coverUrl || song.coverImage ? (
+                                            <img
+                                                src={song.coverUrl || song.coverImage}
+                                                alt={song.title}
+                                                className="song-cover-image"
+                                            />
+                                        ) : (
+                                            <span>♫</span>
+                                        )}
+                                        <span className="song-art-play">▶</span>
+                                    </div>
+
+                                    <h3>{song.title}</h3>
+                                    <p>{song.artist}</p>
+
+                                    <button
+                                        type="button"
+                                        className={`dashboard-heart ${isLiked ? "liked" : ""}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onLike(songId);
+                                        }}
+                                        aria-label={`Like ${song.title}`}
+                                    >
+                                        {isLiked ? "♥" : "♡"}
+                                    </button>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </section>
@@ -111,12 +239,16 @@ function HomeDiscovery({
                 </div>
 
                 <div className="genre-list">
-                    <div>Pop</div>
-                    <div>Indie</div>
-                    <div>Lo-fi</div>
-                    <div>Classical</div>
-                    <div>Rock</div>
-                    <div>Instrumental</div>
+                    {["Pop", "Indie", "Lo-fi", "Classical", "Rock", "Instrumental"].map((genre) => (
+                        <div
+                            key={genre}
+                            onClick={() => onSelectGenre?.(genre)}
+                            style={{ cursor: "pointer" }}
+                            title={`Filter by ${genre}`}
+                        >
+                            {genre}
+                        </div>
+                    ))}
                 </div>
             </section>
 
@@ -125,40 +257,147 @@ function HomeDiscovery({
                 <p>MAKE IT YOURS</p>
                 <h2>Create a playlist for every version of you.</h2>
                 <p>Bring your favourite sounds together in one place.</p>
-                <button type="button" className="banner-button" onClick={onOpenCreate}>
-                    Create a playlist
-                </button>
             </section>
         </>
     );
 }
 
+function PlaylistDetails({ playlist, songs, onBack }) {
+    const { playSong } = usePlayer();
+    const playlistSongIds = Array.isArray(playlist.songs) ? playlist.songs : [];
+
+    const playlistSongs = songs.filter((song) =>
+        playlistSongIds.includes(song.id || song._id)
+    );
+
+    return (
+        <section className="dashboard-view">
+            <button
+                type="button"
+                className="dashboard-add-button"
+                onClick={onBack}
+            >
+                ← My Playlists
+            </button>
+
+            <p className="dashboard-eyebrow" style={{ marginTop: 24 }}>
+                YOUR PLAYLIST
+            </p>
+
+            <h1>{playlist.name || playlist.title}</h1>
+
+            <p className="dashboard-subtitle">
+                {playlist.description || "Your personal music collection"} ·{" "}
+                {playlistSongs.length} songs
+            </p>
+
+            {playlistSongs.length === 0 ? (
+                <div className="dashboard-empty">
+                    <span className="dashboard-big-icon">♫</span>
+                    <h2>This playlist is empty</h2>
+                    <p>You can add songs when creating a playlist.</p>
+                </div>
+            ) : (
+                <div className="dashboard-song-list">
+                    {playlistSongs.map((song) => (
+                        <div
+                            className="dashboard-song"
+                            key={song.id || song._id}
+                            onClick={() => playSong(song)}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <div className="dashboard-song-art">
+                                {song.coverUrl || song.coverImage ? (
+                                    <img
+                                        src={song.coverUrl || song.coverImage}
+                                        alt={song.title}
+                                        className="song-cover-image"
+                                    />
+                                ) : (
+                                    "♫"
+                                )}
+                            </div>
+
+                            <div className="dashboard-song-info">
+                                <h3>{song.title}</h3>
+                                <p>{song.artist}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function readLocalStorage(key, fallback) {
+    try {
+        const savedData = localStorage.getItem(key);
+        return savedData ? JSON.parse(savedData) : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
 function Home() {
     const location = useLocation();
     const navigate = useNavigate();
-    const entry = location.state;
+    const { playSong } = usePlayer();
 
-    // Which panel is open in the main area.
-    const [activeView, setActiveView] = useState(() => {
-        if (entry?.view === "profile") return "profile";
-        if (entry?.view === "search") return "search";
-        if (entry?.view === "song" && entry.songId !== undefined) return "song";
-        return "home";
-    });
-    const [searchQuery, setSearchQuery] = useState(entry?.query || "");
-    const [selectedMood, setSelectedMood] = useState(null);
-    const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
-    const [selectedSongId, setSelectedSongId] = useState(entry?.songId ?? null);
-    const [songBackView, setSongBackView] = useState("home");
+    const [activeView, setActiveView] = useState(
+        location.state?.view || "home"
+    );
 
-    // Songs from the backend
+    // Sync search query from URL parameter if present (?search=xyz)
+    const urlQuery = new URLSearchParams(location.search).get("search") || "";
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+
+    useEffect(() => {
+        const query = new URLSearchParams(location.search).get("search") || "";
+        if (query !== searchQuery) {
+            setSearchQuery(query);
+        }
+    }, [location.search]);
+
     const [songs, setSongs] = useState([]);
     const [songsLoading, setSongsLoading] = useState(true);
     const [songsError, setSongsError] = useState("");
+    const [catalogSongs, setCatalogSongs] = useState([]);
 
-    // Liked songs + playlists (synced with the backend)
-    const library = useLibrary();
+    // Live search in 114k catalog when searchQuery is entered
+    useEffect(() => {
+        let isMounted = true;
+        if (!searchQuery.trim()) {
+            setCatalogSongs([]);
+            return;
+        }
 
+        const timer = setTimeout(async () => {
+            const results = await searchCatalogSongs(searchQuery.trim(), 12);
+            if (isMounted) {
+                setCatalogSongs(Array.isArray(results) ? results : []);
+            }
+        }, 180);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    }, [searchQuery]);
+
+    // Likes from localStorage (or database if authenticated)
+    const [likedSongs, setLikedSongs] = useState(() =>
+        readLocalStorage("vayam-liked-songs", [])
+    );
+
+    // Playlists
+    const [playlists, setPlaylists] = useState(() =>
+        readLocalStorage("vayam-playlists", [])
+    );
+
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+
+    // Fetch songs
     useEffect(() => {
         let isMounted = true;
 
@@ -168,70 +407,96 @@ function Home() {
                 setSongsError("");
 
                 const response = await getSongs();
-                if (isMounted) setSongs(toList(response.data).map(unwrapSong));
+
+                if (isMounted) {
+                    const fetchedSongs = Array.isArray(response.data)
+                        ? response.data
+                        : [];
+                    setSongs(fetchedSongs);
+                }
             } catch (error) {
                 console.error("Failed to fetch songs:", error);
                 if (isMounted) {
-                    setSongsError("Songs could not be loaded. Please try again later.");
+                    setSongsError("Could not load songs. Please try again later.");
                 }
             } finally {
-                if (isMounted) setSongsLoading(false);
+                if (isMounted) {
+                    setSongsLoading(false);
+                }
             }
         }
 
         fetchSongs();
+
+        // Also sync user's online likes and playlists if logged in
+        if (isAuthenticated()) {
+            getLikedSongs()
+                .then((res) => {
+                    if (isMounted && Array.isArray(res.data)) {
+                        setLikedSongs(res.data.map((s) => s.id || s));
+                    }
+                })
+                .catch(() => {});
+
+            getUserPlaylists()
+                .then((res) => {
+                    if (isMounted && Array.isArray(res.data)) {
+                        setPlaylists(res.data);
+                    }
+                })
+                .catch(() => {});
+        }
+
         return () => {
             isMounted = false;
         };
     }, []);
 
-    // Start every panel at the top.
+    // Save likes locally
     useEffect(() => {
-        window.scrollTo({ top: 0 });
-    }, [activeView, selectedMood, selectedPlaylistId, selectedSongId]);
+        localStorage.setItem("vayam-liked-songs", JSON.stringify(likedSongs));
+    }, [likedSongs]);
 
-    // Hide the error/notice banner after a few seconds.
-    const { notice, clearNotice } = library;
+    // Save playlists locally
     useEffect(() => {
-        if (!notice) return undefined;
-        const timer = setTimeout(clearNotice, 5000);
-        return () => clearTimeout(timer);
-    }, [notice, clearNotice]);
+        localStorage.setItem("vayam-playlists", JSON.stringify(playlists));
+    }, [playlists]);
+
+    function toggleLike(songId) {
+        setLikedSongs((current) =>
+            current.includes(songId)
+                ? current.filter((id) => id !== songId)
+                : [...current, songId]
+        );
+    }
+
+    function createPlaylist(data) {
+        const playlist = {
+            ...data,
+            id: `playlist-${Date.now()}`,
+            songs: Array.isArray(data.songs) ? data.songs : [],
+        };
+
+        setPlaylists((current) => [...current, playlist]);
+        setSelectedPlaylistId(playlist.id);
+        setActiveView("playlist-details");
+    }
 
     function openView(view) {
         setActiveView(view);
         setSelectedPlaylistId(null);
     }
 
-    function openMood(moodKey) {
-        setSelectedMood(moodKey);
-        setSelectedPlaylistId(null);
-        setActiveView("moods");
-    }
-
-    function openPlaylist(id) {
-        setSelectedPlaylistId(id);
-        setActiveView("playlist-details");
-    }
-
-    function openSong(song) {
-        if (activeView !== "song") setSongBackView(activeView);
-        setSelectedSongId(song.id);
-        setActiveView("song");
-    }
-
-    function runSearch(query) {
+    const handleSearch = (query) => {
         setSearchQuery(query);
-        setSelectedPlaylistId(null);
-        setActiveView("search");
-    }
+        if (activeView !== "home") {
+            setActiveView("home");
+        }
+    };
 
-    async function handleCreatePlaylist(data) {
-        const created = await library.createPlaylist(data);
-        openPlaylist(created.id);
-    }
-
-    const sidebarActive = (...views) => (views.includes(activeView) ? "active" : "");
+    const selectedPlaylist = playlists.find(
+        (playlist) => (playlist.id || playlist._id) === selectedPlaylistId
+    );
 
     return (
         <div className="music-home">
@@ -239,8 +504,10 @@ function Home() {
                 onProfileClick={() => openView("profile")}
                 onHomeClick={() => {
                     openView("home");
+                    setSearchQuery("");
                 }}
-                onSearch={runSearch}
+                onSearch={handleSearch}
+                searchQuery={searchQuery}
             />
 
             <div className="music-home-layout">
@@ -253,7 +520,7 @@ function Home() {
 
                     <button
                         type="button"
-                        className={`library-item ${sidebarActive("liked")}`}
+                        className={`library-item ${activeView === "liked" ? "active" : ""}`}
                         onClick={() => openView("liked")}
                     >
                         <span>♡</span> Liked Songs
@@ -261,64 +528,36 @@ function Home() {
 
                     <button
                         type="button"
-                        className={`library-item ${sidebarActive("playlists", "playlist-details")}`}
+                        className={`library-item ${
+                            ["playlists", "playlist-details"].includes(activeView) ? "active" : ""
+                        }`}
                         onClick={() => openView("playlists")}
                     >
                         <span>☷</span> My Playlists
                     </button>
 
+                    {/* Additional Feature: Collaborative Playlists */}
                     <button
                         type="button"
-                        className="library-item"
-                        onClick={() => navigate("/collab")}
+                        className={`library-item ${activeView === "collab" ? "active" : ""}`}
+                        onClick={() => openView("collab")}
                     >
-                        <span>◎</span> Collab Playlists
+                        <span>♬</span> Collaborative Playlists
                     </button>
 
-                    <p className="library-label">Discover</p>
-
+                    {/* Additional Feature: AI StorySong */}
                     <button
                         type="button"
-                        className={`library-item ${sidebarActive("moods")}`}
-                        onClick={() => {
-                            setSelectedMood(null);
-                            openView("moods");
-                        }}
+                        className={`library-item ${activeView === "storysong" ? "active" : ""}`}
+                        onClick={() => openView("storysong")}
                     >
-                        <span>◐</span> Moods
-                    </button>
-
-                    <button
-                        type="button"
-                        className={`library-item ${sidebarActive("recommendations")}`}
-                        onClick={() => openView("recommendations")}
-                    >
-                        <span>✦</span> For You
-                    </button>
-
-                    <button
-                        type="button"
-                        className={`library-item ${sidebarActive("generate")}`}
-                        onClick={() => openView("generate")}
-                    >
-                        <span>ϟ</span> Playlist Generator
-                    </button>
-
-                    <button
-                        type="button"
-                        className={`library-item ${sidebarActive("story")}`}
-                        onClick={() => openView("story")}
-                    >
-                        <span>✎</span> StorySong
+                        <span>✨</span> AI StorySong
                     </button>
 
                     <div className="create-playlist-box">
                         <span className="create-playlist-icon">＋</span>
-
                         <h3>Create Playlist</h3>
-
                         <p>Create a collection of your favourite songs.</p>
-
                         <button
                             type="button"
                             className="create-playlist-button"
@@ -331,137 +570,68 @@ function Home() {
 
                 {/* Main Content */}
                 <main className="music-content">
-                    {library.notice && (
-                        <p className="dashboard-notice" role="alert">
-                            {library.notice}
-                        </p>
-                    )}
-
                     {activeView === "home" && (
                         <HomeDiscovery
                             songs={songs}
                             songsLoading={songsLoading}
                             songsError={songsError}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                            onOpenSong={openSong}
-                            onSelectMood={openMood}
-                            onOpenMoods={() => {
-                                setSelectedMood(null);
-                                openView("moods");
-                            }}
-                            onOpenForYou={() => openView("recommendations")}
-                            onOpenCreate={() => openView("create")}
-                        />
-                    )}
-
-                    {activeView === "moods" && (
-                        <Moods
-                            mood={selectedMood}
-                            onSelectMood={openMood}
-                            onOpenSong={openSong}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                        />
-                    )}
-
-                    {activeView === "search" && (
-                        <Search
-                            key={searchQuery}
-                            initialQuery={searchQuery}
-                            onOpenSong={openSong}
-                            onSelectMood={openMood}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                        />
-                    )}
-
-                    {activeView === "recommendations" && (
-                        <Recommendations
-                            onOpenSong={openSong}
-                            onPickMood={() => {
-                                setSelectedMood(null);
-                                openView("moods");
-                            }}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                        />
-                    )}
-
-                    {activeView === "song" && selectedSongId !== null && (
-                        <SongDetails
-                            key={selectedSongId}
-                            songId={selectedSongId}
-                            playlists={library.playlists}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                            onOpenSong={openSong}
-                            onBack={() => openView(songBackView)}
-                            onPlaylistChanged={library.refreshPlaylists}
+                            onLike={toggleLike}
+                            likedSongs={likedSongs}
+                            searchQuery={searchQuery}
+                            catalogSongs={catalogSongs}
+                            onClearSearch={() => setSearchQuery("")}
+                            onSelectGenre={(genre) => handleSearch(genre)}
                         />
                     )}
 
                     {activeView === "liked" && (
                         <LikedSongs
-                            likedItems={library.likedItems}
                             songs={songs}
-                            onToggleLike={library.toggleLike}
-                            onOpenSong={openSong}
+                            likedSongs={likedSongs}
+                            onToggleLike={toggleLike}
                         />
                     )}
 
                     {activeView === "playlists" && (
                         <MyPlaylists
-                            playlists={library.playlists}
-                            loading={library.libraryLoading}
-                            onSelectPlaylist={openPlaylist}
-                            onCreate={() => openView("create")}
-                            onGenerate={() => openView("generate")}
+                            playlists={playlists}
+                            onSelectPlaylist={(id) => {
+                                setSelectedPlaylistId(id);
+                                setActiveView("playlist-details");
+                            }}
                         />
                     )}
 
                     {activeView === "create" && (
                         <CreatePlaylist
                             songs={songs}
-                            onCreatePlaylist={handleCreatePlaylist}
+                            onCreatePlaylist={createPlaylist}
                         />
                     )}
 
-                    {activeView === "generate" && (
-                        <PlaylistGenerator
-                            onGenerated={library.refreshPlaylists}
-                            onOpenPlaylist={openPlaylist}
-                            onOpenSong={openSong}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                        />
-                    )}
-
-                    {activeView === "story" && (
-                        <StorySong
-                            onOpenSong={openSong}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
-                        />
-                    )}
-
-                    {activeView === "playlist-details" && selectedPlaylistId !== null && (
+                    {activeView === "playlist-details" && selectedPlaylist && (
                         <PlaylistDetails
-                            key={selectedPlaylistId}
-                            playlistId={selectedPlaylistId}
+                            playlist={selectedPlaylist}
+                            songs={songs}
                             onBack={() => openView("playlists")}
-                            onChanged={library.refreshPlaylists}
-                            onDeleted={() => openView("playlists")}
-                            onOpenSong={openSong}
-                            isLiked={library.isLiked}
-                            onToggleLike={library.toggleLike}
                         />
+                    )}
+
+                    {/* Additional Feature: Collaborative Playlists */}
+                    {activeView === "collab" && <CollabPlaylists />}
+
+                    {/* Additional Feature: AI StorySong */}
+                    {activeView === "storysong" && (
+                        <StorySong onPlaySong={playSong} />
                     )}
 
                     {activeView === "profile" && (
                         <Profile
-                            playlists={library.playlists}
-                            onSelectPlaylist={openPlaylist}
+                            playlists={playlists}
+                            onSelectPlaylist={(id) => {
+                                setSelectedPlaylistId(id);
+                                setActiveView("playlist-details");
+                            }}
                         />
                     )}
 

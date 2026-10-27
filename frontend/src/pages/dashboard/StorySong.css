@@ -1,0 +1,563 @@
+.storysong-view {
+  width: 100%;
+  color: #f5efff;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.storysong-header {
+  margin-bottom: 24px;
+}
+
+.storysong-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(196, 161, 255, 0.18), rgba(124, 58, 237, 0.28));
+  border: 1px solid rgba(196, 161, 255, 0.3);
+  color: #d8b4fe;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.storysong-header h1 {
+  margin: 0;
+  font-size: clamp(26px, 3.5vw, 36px);
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 40%, #c4a1ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.storysong-header p {
+  margin: 8px 0 0;
+  color: #b9adc9;
+  font-size: 14px;
+  max-width: 650px;
+  line-height: 1.6;
+}
+
+/* Studio Workspace Container */
+.storysong-workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 36px;
+}
+
+@media (min-width: 880px) {
+  .storysong-workspace {
+    grid-template-columns: 1.1fr 1fr;
+    align-items: start;
+  }
+}
+
+/* Glassmorphism Input Card */
+.storysong-input-card {
+  background: rgba(25, 18, 34, 0.85);
+  border: 1px solid rgba(196, 161, 255, 0.15);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+/* Dropzone Styling */
+.storysong-dropzone {
+  border: 2px dashed rgba(196, 161, 255, 0.25);
+  border-radius: 16px;
+  padding: 28px 18px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(14, 10, 20, 0.5);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.storysong-dropzone:hover,
+.storysong-dropzone.drag-active {
+  border-color: #c4a1ff;
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.storysong-dropzone-icon {
+  font-size: 38px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.storysong-dropzone h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.storysong-dropzone p {
+  margin: 0;
+  font-size: 12px;
+  color: #9d8eb6;
+}
+
+.storysong-file-input {
+  display: none;
+}
+
+/* Uploaded Image Preview */
+.storysong-preview-box {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  max-height: 260px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.storysong-preview-img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.storysong-remove-img {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.storysong-remove-img:hover {
+  background: #ef4444;
+}
+
+/* Vibe & Hint Inputs */
+.storysong-form-group {
+  margin-top: 20px;
+}
+
+.storysong-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #d8b4fe;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.storysong-textarea {
+  width: 100%;
+  background: rgba(14, 10, 20, 0.7);
+  border: 1px solid rgba(196, 161, 255, 0.2);
+  border-radius: 12px;
+  color: #fff;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 75px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.storysong-textarea:focus {
+  border-color: #c4a1ff;
+  box-shadow: 0 0 0 2px rgba(196, 161, 255, 0.2);
+}
+
+/* Preset Chips */
+.storysong-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.storysong-chip {
+  background: rgba(196, 161, 255, 0.08);
+  border: 1px solid rgba(196, 161, 255, 0.2);
+  color: #b9adc9;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.storysong-chip:hover {
+  background: rgba(196, 161, 255, 0.2);
+  color: #fff;
+  border-color: #c4a1ff;
+}
+
+/* Controls Row */
+.storysong-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.storysong-count-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #b9adc9;
+}
+
+.storysong-count-select {
+  background: rgba(14, 10, 20, 0.8);
+  border: 1px solid rgba(196, 161, 255, 0.2);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.storysong-submit-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
+}
+
+.storysong-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(124, 58, 237, 0.55);
+  background: linear-gradient(135deg, #8b5cf6, #c084fc);
+}
+
+.storysong-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading & Error States */
+.storysong-status-box {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.storysong-status-box.loading {
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(196, 161, 255, 0.3);
+  color: #d8b4fe;
+}
+
+.storysong-status-box.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.storysong-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(196, 161, 255, 0.3);
+  border-top-color: #c4a1ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Atmosphere Analysis Display Card */
+.storysong-atmosphere-card {
+  background: linear-gradient(165deg, rgba(32, 21, 46, 0.95), rgba(18, 12, 26, 0.95));
+  border: 1px solid rgba(196, 161, 255, 0.25);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.storysong-atmosphere-card h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storysong-story-quote {
+  font-style: italic;
+  color: #e9d5ff;
+  font-size: 14px;
+  line-height: 1.6;
+  background: rgba(124, 58, 237, 0.12);
+  padding: 14px 16px;
+  border-left: 3px solid #c4a1ff;
+  border-radius: 0 10px 10px 0;
+  margin: 0;
+}
+
+/* Emotional Coordinates / Gauges */
+.storysong-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.storysong-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.storysong-meter-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.storysong-meter-label {
+  color: #b9adc9;
+  font-weight: 600;
+}
+
+.storysong-meter-value {
+  color: #c4a1ff;
+  font-weight: 700;
+}
+
+.storysong-progress-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.storysong-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.storysong-progress-fill.valence {
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+}
+
+.storysong-progress-fill.energy {
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+}
+
+.storysong-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(196, 161, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #d8b4fe;
+  width: fit-content;
+}
+
+/* Results Song Cards List */
+.storysong-results-section {
+  margin-top: 32px;
+}
+
+.storysong-results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.storysong-results-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.storysong-results-heading span {
+  font-size: 12px;
+  color: #9d8eb6;
+}
+
+.storysong-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.storysong-card {
+  background: #191222;
+  border: 1px solid rgba(196, 161, 255, 0.12);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.storysong-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(196, 161, 255, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.storysong-card.playing {
+  border-color: #c4a1ff;
+  background: linear-gradient(145deg, #221633, #191222);
+}
+
+.storysong-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.storysong-card-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #372159, #201335);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: #c4a1ff;
+  flex-shrink: 0;
+}
+
+.storysong-card-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.storysong-card-info h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+
+.storysong-card-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #b9adc9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.storysong-card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.storysong-genre-tag {
+  font-size: 10px;
+  background: rgba(196, 161, 255, 0.1);
+  color: #c4a1ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.storysong-match-score {
+  font-size: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.storysong-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.storysong-play-btn {
+  background: #7c3aed;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.storysong-play-btn:hover {
+  background: #9333ea;
+  transform: scale(1.02);
+}
+
+.storysong-card.playing .storysong-play-btn {
+  background: #10b981;
+}

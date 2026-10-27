@@ -1,8 +1,8 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isAuthenticated } from "../api/api";
-import { getCurrentUser } from "../api/musicApi";
+import { getCurrentUser, searchSongs, searchCatalogSongs } from "../api/musicApi";
+import { usePlayer } from "../context/PlayerContext";
 
 import "./Navbar.css";
 
@@ -20,11 +20,26 @@ function ProfileIcon() {
   );
 }
 
-function Navbar({ onProfileClick, onHomeClick, onSearch }) {
-  const [search, setSearch] = useState("");
+function Navbar({ onProfileClick, onHomeClick, onSearch, searchQuery = "" }) {
+  const [search, setSearch] = useState(searchQuery);
   const [initial, setInitial] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const searchContainerRef = useRef(null);
+  const debounceTimerRef = useRef(null);
+
   const navigate = useNavigate();
   const loggedIn = isAuthenticated();
+  const { playSong } = usePlayer();
+
+  // Sync internal search state if parent passes new searchQuery
+  useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== search) {
+      setSearch(searchQuery);
+    }
+  }, [searchQuery]);
 
   // Show the first letter of the user's name on the profile button.
   useEffect(() => {
@@ -36,12 +51,126 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
         const name = response.data?.name ?? response.data?.user?.name;
         if (active && name) setInitial(name.trim().charAt(0).toUpperCase());
       })
-      .catch(() => { });
+      .catch(() => {});
 
     return () => {
       active = false;
     };
   }, [loggedIn]);
+
+  // Close dropdown on outside click or Escape key
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setShowDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Handle typing: immediate in-page filter + debounced floating dropdown fetch
+  const handleInputChange = (event) => {
+    const query = event.target.value;
+    setSearch(query);
+
+    // 1. Immediate in-page filter for parent view (e.g. Home)
+    if (onSearch) {
+      onSearch(query);
+    }
+
+    // 2. Clear previous debounced lookup
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowDropdown(true);
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const [dbRes, catalogRes] = await Promise.allSettled([
+          searchSongs(query.trim()),
+          searchCatalogSongs(query.trim(), 8),
+        ]);
+
+        const dbSongs =
+          dbRes.status === "fulfilled" && Array.isArray(dbRes.value?.data)
+            ? dbRes.value.data
+            : [];
+        const catalogSongs =
+          catalogRes.status === "fulfilled" && Array.isArray(catalogRes.value)
+            ? catalogRes.value
+            : [];
+
+        // Combine distinct by title + artist
+        const seen = new Set();
+        const combined = [];
+
+        for (const song of [...dbSongs, ...catalogSongs]) {
+          const key = `${(song.title || "").toLowerCase().trim()}_${(song.artist || "").toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            combined.push(song);
+          }
+        }
+
+        setSearchResults(combined);
+      } catch (error) {
+        console.warn("Floating search query fallback:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 200);
+  };
+
+  const handleClearSearch = () => {
+    setSearch("");
+    setSearchResults([]);
+    setShowDropdown(false);
+    setIsSearching(false);
+    if (onSearch) {
+      onSearch("");
+    }
+  };
+
+  const handleSelectSong = (song) => {
+    setShowDropdown(false);
+    playSong(song);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setShowDropdown(false);
+    const query = search.trim();
+    if (onSearch) {
+      onSearch(query);
+    } else if (query) {
+      navigate(`/home?search=${encodeURIComponent(query)}`);
+    }
+  };
 
   const goHome = (event) => {
     event.preventDefault();
@@ -51,10 +180,8 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
 
   const openProfile = () => {
     if (onProfileClick) {
-      // Already on the Home page: open Profile in the right-side panel.
       onProfileClick();
     } else {
-      // Anywhere else: go to Home and open the Profile panel.
       navigate("/home", { state: { view: "profile" } });
     }
   };
@@ -101,50 +228,117 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
         </svg>
       </a>
 
-      <form
-        className="navbar-search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const query = search.trim();
-          if (!query) return;
+      {/* Search Bar Wrapper with Floating Dropdown */}
+      <div className="navbar-search-wrapper" ref={searchContainerRef}>
+        <form className="navbar-search" onSubmit={handleSearchSubmit}>
+          <button type="submit" aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle
+                cx="11"
+                cy="11"
+                r="7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="m16 16 4 4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
 
-          if (onSearch) {
-            // Already on the Home page: show results in the main panel.
-            onSearch(query);
-          } else {
-            // Anywhere else: go to Home and open the Search view.
-            navigate("/home", { state: { view: "search", query } });
-          }
-        }}
-      >
-        <button type="submit" aria-label="Search">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle
-              cx="11"
-              cy="11"
-              r="7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="m16 16 4 4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+          <input
+            type="search"
+            placeholder="Search songs, artists, moods..."
+            value={search}
+            onChange={handleInputChange}
+            onFocus={() => {
+              if (search.trim() && (searchResults.length > 0 || isSearching)) {
+                setShowDropdown(true);
+              }
+            }}
+            aria-label="Search music"
+          />
 
-        <input
-          type="search"
-          placeholder="Search music..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          aria-label="Search music"
-        />
-      </form>
+          {search && (
+            <button
+              type="button"
+              className="navbar-search-clear"
+              onClick={handleClearSearch}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </form>
+
+        {/* Floating Live Results Dropdown */}
+        {showDropdown && search.trim() && (
+          <div className="navbar-search-dropdown">
+            {isSearching ? (
+              <div className="search-dropdown-message">Searching tracks...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="search-dropdown-message">
+                No songs found for "{search}".
+              </div>
+            ) : (
+              <>
+                <div className="search-dropdown-header">
+                  Top Matches ({searchResults.length})
+                </div>
+                <div className="search-dropdown-list">
+                  {searchResults.slice(0, 6).map((song) => (
+                    <div
+                      key={song.id || song._id || song.title}
+                      className="search-result-item"
+                      onClick={() => handleSelectSong(song)}
+                    >
+                      <div className="search-result-thumb">
+                        {song.coverUrl || song.coverImage ? (
+                          <img
+                            src={song.coverUrl || song.coverImage}
+                            alt={song.title}
+                          />
+                        ) : (
+                          <span>♫</span>
+                        )}
+                      </div>
+
+                      <div className="search-result-info">
+                        <span className="search-result-title">
+                          {song.title}
+                        </span>
+                        <span className="search-result-artist">
+                          {song.artist || "Unknown artist"}
+                          {song.genre ? ` · ${song.genre}` : ""}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="search-result-play-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectSong(song);
+                        }}
+                        aria-label={`Play ${song.title}`}
+                        title="Play"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {loggedIn ? (
         <button
@@ -169,6 +363,5 @@ function Navbar({ onProfileClick, onHomeClick, onSearch }) {
     </nav>
   );
 }
-
 
 export default Navbar;

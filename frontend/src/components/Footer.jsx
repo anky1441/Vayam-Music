@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import "./Footer.css";
 
 function Footer({ showCTA = true }) {
+  const navigate = useNavigate();
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({
       behavior: "smooth",
@@ -34,7 +35,7 @@ function Footer({ showCTA = true }) {
 
             <button
               className="footer-cta-button"
-              onClick={() => scrollToSection("home")}
+              onClick={() => navigate("/home")}
               type="button"
             >
               Explore Vayam <span aria-hidden="true">↗</span>
