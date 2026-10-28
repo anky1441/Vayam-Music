@@ -88,8 +88,8 @@ public class PlaylistController {
     @PostMapping("/{playlistId:[0-9]+}/members")
     public Map<String, Object> addMember(@PathVariable Long playlistId, @Valid @RequestBody AddMemberRequest request, Authentication auth) {
         if (collaborativePlaylistService == null) return Map.of("success", false);
-        collaborativePlaylistService.addMember(userId(auth), playlistId, request);
-        return Map.of("success", true, "message", "Member added to playlist", "playlistId", playlistId, "userId", request.userId());
+        Long memberUserId = collaborativePlaylistService.addMember(userId(auth), playlistId, request);
+        return Map.of("success", true, "message", "Member added to playlist", "playlistId", playlistId, "userId", memberUserId);
     }
 
     @DeleteMapping("/{playlistId:[0-9]+}/members/{targetUserId:[0-9]+}")

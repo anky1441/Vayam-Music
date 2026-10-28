@@ -1,5 +1,7 @@
 package com.vayam.music.dto;
 
-import jakarta.validation.constraints.NotNull;
-
-public record AddMemberRequest(@NotNull Long userId) {}
+public record AddMemberRequest(Long userId, String email) {
+    public AddMemberRequest(Long userId) {
+        this(userId, null);
+    }
+}

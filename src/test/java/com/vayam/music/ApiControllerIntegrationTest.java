@@ -29,6 +29,7 @@ class ApiControllerIntegrationTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static String jwtToken;
+    private static String userEmail;
     private static Long testSongId;
     private static Long createdPlaylistId;
     private static Long aliceUserId;
@@ -50,6 +51,7 @@ class ApiControllerIntegrationTest {
     @Order(2)
     void testRegisterAndLogin() throws Exception {
         String uniqueEmail = "user_" + System.currentTimeMillis() + "@example.com";
+        userEmail = uniqueEmail;
         String regJson = """
             {
                 "name": "Integration Tester",
@@ -419,6 +421,46 @@ class ApiControllerIntegrationTest {
                         .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)));
+
+        // Test adding member by EMAIL (frontend invite-a-friend flow)
+        mockMvc.perform(post("/api/shared-playlists/" + createdPlaylistId + "/members")
+                        .header("Authorization", "Bearer " + jwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "email": "alice@example.com"
+                            }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.userId", is(aliceUserId.intValue())));
+
+        // Test inviting oneself fails with Bad Request
+        mockMvc.perform(post("/api/shared-playlists/" + createdPlaylistId + "/members")
+                        .header("Authorization", "Bearer " + jwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "email": "%s"
+                            }
+                        """.formatted(userEmail)))
+                .andExpect(status().isBadRequest());
+
+        // Test inviting unknown email fails with Not Found
+        mockMvc.perform(post("/api/shared-playlists/" + createdPlaylistId + "/members")
+                        .header("Authorization", "Bearer " + jwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "email": "unknown-friend@example.com"
+                            }
+                        """))
+                .andExpect(status().isNotFound());
+
+        // Clean up: remove Alice
+        mockMvc.perform(delete("/api/shared-playlists/" + createdPlaylistId + "/members/" + aliceUserId)
+                        .header("Authorization", "Bearer " + jwtToken))
+                .andExpect(status().isOk());
     }
 
     @Test

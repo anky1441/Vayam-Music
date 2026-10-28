@@ -36,14 +36,26 @@ public class CollaborativePlaylistService {
         this.songService = songService;
     }
 
-    public void addMember(Long requesterId, Long playlistId, AddMemberRequest request) {
+    public Long addMember(Long requesterId, Long playlistId, AddMemberRequest request) {
         Playlist playlist = playlistService.getEntity(playlistId);
         checkOwner(requesterId, playlist);
 
-        if (playlist.getOwner().getId().equals(request.userId())) return;
-        if (memberRepository.findByPlaylistIdAndUserId(playlistId, request.userId()).isEmpty()) {
-            memberRepository.save(new PlaylistMember(playlist, userService.getById(request.userId()), "MEMBER"));
+        com.vayam.music.model.User targetUser;
+        if (request.userId() != null) {
+            targetUser = userService.getById(request.userId());
+        } else if (request.email() != null && !request.email().isBlank()) {
+            targetUser = userService.getByEmail(request.email());
+        } else {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Either userId or email must be provided");
         }
+
+        if (playlist.getOwner().getId().equals(targetUser.getId())) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "You cannot invite yourself to your own playlist");
+        }
+        if (memberRepository.findByPlaylistIdAndUserId(playlistId, targetUser.getId()).isEmpty()) {
+            memberRepository.save(new PlaylistMember(playlist, targetUser, "MEMBER"));
+        }
+        return targetUser.getId();
     }
 
     public void removeMember(Long requesterId, Long playlistId, Long targetUserId) {

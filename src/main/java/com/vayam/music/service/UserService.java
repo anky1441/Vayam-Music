@@ -19,4 +19,12 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found"));
     }
+
+    public User getByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Email must not be empty");
+        }
+        return userRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found with email: " + email.trim()));
+    }
 }
