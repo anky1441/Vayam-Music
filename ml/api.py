@@ -1,7 +1,12 @@
-
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+import concurrent.futures
+import json
+import urllib.parse
+import urllib.request
+from typing import Optional
+
 from recommender import (
     recommend_similar,
     recommend_by_mood,
@@ -25,9 +30,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_ARTWORK_CACHE = {}
+
+
+def fetch_track_artwork(title: str, artist: str) -> str:
+    """Fetch high-res album artwork from Apple Music/iTunes catalog with caching."""
+    clean_title = (title or "").strip()
+    clean_artist = (artist or "").strip()
+    cache_key = f"{clean_title.lower()}_{clean_artist.lower()}"
+
+    if cache_key in _ARTWORK_CACHE:
+        return _ARTWORK_CACHE[cache_key]
+
+    search_queries = [
+        f"{clean_title} {clean_artist}".strip(),
+        clean_title,
+    ]
+
+    for term in search_queries:
+        if not term:
+            continue
+        try:
+            url = f"https://itunes.apple.com/search?term={urllib.parse.quote(term)}&entity=song&limit=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                results = data.get("results", [])
+                if results and "artworkUrl100" in results[0]:
+                    art_url = results[0]["artworkUrl100"].replace("100x100bb", "600x600bb")
+                    _ARTWORK_CACHE[cache_key] = art_url
+                    return art_url
+        except Exception:
+            continue
+
+    _ARTWORK_CACHE[cache_key] = ""
+    return ""
+
 
 class SimilarSongRequest(BaseModel):
-    song_name: str = Field(min_length=1)
+    song_name: Optional[str] = None
     number: int = Field(default=5, ge=1, le=20)
 
 
@@ -57,19 +98,58 @@ def health():
 
 
 @app.post("/recommend/similar")
-def similar_songs(request: SimilarSongRequest):
-    result = recommend_similar(
-        request.song_name.strip(),
-        request.number,
-    )
+def similar_songs_post(request: SimilarSongRequest):
+    name = (request.song_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Song name is required")
+    return _process_similar_recommendations(name, request.number)
+
+
+@app.get("/recommend/similar")
+def similar_songs_get(song_name: str, number: int = 5):
+    name = (song_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Song name is required")
+    return _process_similar_recommendations(name, number)
+
+
+def _process_similar_recommendations(song_name: str, number: int):
+    result = recommend_similar(song_name, number=number)
 
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
 
+    formatted = []
+    for r in (result if isinstance(result, list) else []):
+        t_name = r.get("track_name", "")
+        t_artist = r.get("artists", "")
+        formatted.append({
+            "id": f"rec_{t_name}_{t_artist}",
+            "title": t_name,
+            "artist": t_artist,
+            "genre": r.get("track_genre", "Pop"),
+            "coverUrl": "",
+            "audioUrl": "",
+        })
+
+    # Fetch album artwork in parallel
+    if formatted:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(formatted))) as executor:
+            future_to_track = {
+                executor.submit(fetch_track_artwork, r["title"], r["artist"]): r
+                for r in formatted
+            }
+            for future in concurrent.futures.as_completed(future_to_track):
+                track = future_to_track[future]
+                try:
+                    track["coverUrl"] = future.result()
+                except Exception:
+                    pass
+
     return {
         "feature": "similar_song_recommendation",
-        "query": request.song_name,
-        "recommendations": result,
+        "query": song_name,
+        "recommendations": formatted,
     }
 
 
@@ -126,13 +206,13 @@ def startup_event():
     ]
     prewarm_cache(sample_tracks)
 
+
 @app.post("/storysong/match")
 async def storysong_match(
     file: UploadFile = File(...),
     vibe: str = Form(""),
     number: int = Form(5),
 ):
-    #Feature 4
     try:
         image_bytes = await file.read()
         vibe_data = extract_story_vibe(image_bytes, vibe_text=vibe)
@@ -145,49 +225,6 @@ async def storysong_match(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"StorySong matching failed: {str(e)}")
-
-
-import concurrent.futures
-import json
-import urllib.parse
-import urllib.request
-
-_ARTWORK_CACHE = {}
-
-
-def fetch_track_artwork(title: str, artist: str) -> str:
-    """Fetch high-res album artwork from Apple Music/iTunes catalog with caching."""
-    clean_title = (title or "").strip()
-    clean_artist = (artist or "").strip()
-    cache_key = f"{clean_title.lower()}_{clean_artist.lower()}"
-
-    if cache_key in _ARTWORK_CACHE:
-        return _ARTWORK_CACHE[cache_key]
-
-    # Primary query: track title + artist
-    search_queries = [
-        f"{clean_title} {clean_artist}".strip(),
-        clean_title,
-    ]
-
-    for term in search_queries:
-        if not term:
-            continue
-        try:
-            url = f"https://itunes.apple.com/search?term={urllib.parse.quote(term)}&entity=song&limit=1"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-            with urllib.request.urlopen(req, timeout=2.0) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                results = data.get("results", [])
-                if results and "artworkUrl100" in results[0]:
-                    art_url = results[0]["artworkUrl100"].replace("100x100bb", "600x600bb")
-                    _ARTWORK_CACHE[cache_key] = art_url
-                    return art_url
-        except Exception:
-            continue
-
-    _ARTWORK_CACHE[cache_key] = ""
-    return ""
 
 
 @app.get("/songs/search")
@@ -260,4 +297,3 @@ def search_catalog_songs(query: str, limit: int = 10):
                     pass
 
     return results[:limit]
-

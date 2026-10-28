@@ -29,12 +29,12 @@ export default function Player() {
     } = usePlayer();
 
     const {
-        isLiked,
-        toggleLike,
-        playlists,
-        addSongToPlaylist,
-        createPlaylist,
-    } = useLibrary();
+        isLiked = () => false,
+        toggleLike = () => {},
+        playlists = [],
+        addSongToPlaylist = () => ({ success: false }),
+        createPlaylist = () => null,
+    } = useLibrary() || {};
 
     const [showPlaylistModal, setShowPlaylistModal] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");

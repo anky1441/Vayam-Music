@@ -157,6 +157,43 @@ export const matchStorySong = async (formData) => {
   return response.json();
 };
 
+/** POST /recommend/similar - Fetches similar song recommendations from the ML engine */
+export const getSimilarRecommendations = async (songName, number = 5) => {
+  if (!songName || !songName.trim()) return [];
+
+  const isMixedContent =
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    ML_BASE_URL.startsWith("http://");
+
+  if (!isMixedContent) {
+    try {
+      const response = await fetch(`${ML_BASE_URL}/recommend/similar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ song_name: songName.trim(), number }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawRecs = Array.isArray(data.recommendations) ? data.recommendations : [];
+        return rawRecs.map((item) => ({
+          id: item.id || `rec_${item.track_name || item.title}_${item.artists || item.artist}`,
+          title: item.track_name || item.title,
+          artist: item.artists || item.artist,
+          genre: item.track_genre || item.genre || "Pop",
+          coverUrl: item.coverUrl || "",
+          audioUrl: "",
+        }));
+      }
+    } catch (err) {
+      console.warn("ML similar recommendations error:", err);
+    }
+  }
+
+  return [];
+};
+
 /** GET /songs/search - Searches catalog via ML backend with automatic cloud catalog fallback for production */
 export const searchCatalogSongs = async (query, limit = 8) => {
   if (!query || !query.trim()) return [];

@@ -10,7 +10,20 @@ import {
 } from "../api/musicApi";
 import { sameId, unwrapSong } from "../utils/music";
 
-const LibraryContext = createContext();
+const defaultLibraryContext = {
+  likedSongs: [],
+  setLikedSongs: () => {},
+  playlists: [],
+  setPlaylists: () => {},
+  isLiked: () => false,
+  toggleLike: () => {},
+  addSongToPlaylist: () => ({ success: false }),
+  createPlaylist: () => null,
+  syncLibrary: () => {},
+  loading: false,
+};
+
+const LibraryContext = createContext(defaultLibraryContext);
 
 function readLocalStorage(key, fallback) {
   try {
@@ -360,4 +373,4 @@ export function LibraryProvider({ children }) {
   );
 }
 
-export const useLibrary = () => useContext(LibraryContext);
+export const useLibrary = () => useContext(LibraryContext) || defaultLibraryContext;

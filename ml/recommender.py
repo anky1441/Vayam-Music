@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import re
 import joblib
 import pandas as pd
 from scipy.sparse import csr_matrix, hstack
@@ -34,33 +34,72 @@ X = hstack(
 )
 
 
-def recommend_similar(song_name, number=5):
-    """Recommend songs similar to the given song."""
+def clean_song_name(name):
+    """Normalize song title by stripping extraneous bracketed labels, featured artists, and channel tags."""
+    if not name or not isinstance(name, str):
+        return ""
+    cleaned = re.sub(r"\(.*?\)|\[.*?\]", "", name)
+    cleaned = re.sub(r"(?i)\b(feat|ft)\.?\b.*", "", cleaned)
+    if " - " in cleaned:
+        cleaned = cleaned.split(" - ")[-1]
+    return cleaned.strip()
 
+
+def recommend_similar(song_name, number=5):
+    """Recommend songs similar to the given song using NearestNeighbors and audio/genre vectors."""
+    cleaned = clean_song_name(song_name)
+    query = cleaned if cleaned else (song_name or "").strip()
+
+    # 1. Exact or substring match on cleaned title
     matches = songs[
         songs["track_name"].str.contains(
-            song_name, case=False, na=False, regex=False
+            query, case=False, na=False, regex=False
         )
     ]
 
+    # 2. If no match, try individual words if long enough
+    if matches.empty and len(query.split()) > 1:
+        first_word = query.split()[0]
+        if len(first_word) > 2:
+            matches = songs[
+                songs["track_name"].str.contains(
+                    first_word, case=False, na=False, regex=False
+                )
+            ]
+
+    # 3. If still empty, fall back to top popular tracks from catalog
     if matches.empty:
-        return {"error": "Song not found"}
+        top_songs = songs.sort_values(by="popularity", ascending=False).head(number)
+        return top_songs[["track_name", "artists", "track_genre"]].to_dict(orient="records")
 
     position = matches.index[0]
+    matched_title = str(matches.iloc[0]["track_name"]).strip().lower()
 
-    distances, indices = model.kneighbors(
-        X[position], n_neighbors=min(number + 1, len(songs))
-    )
+    # Query neighbors (over-fetch to allow deduplication)
+    n_search = min(max(number * 4, 20), len(songs))
+    distances, indices = model.kneighbors(X[position], n_neighbors=n_search)
 
-    recommendations = [
-        i for i in indices[0] if i != position
-    ][:number]
+    recommendations = []
+    seen_titles = {matched_title}
 
-    result = songs.iloc[recommendations][
-        ["track_name", "artists", "track_genre"]
-    ]
+    for i in indices[0]:
+        if i == position:
+            continue
+        row = songs.iloc[i]
+        t_name = str(row["track_name"]).strip()
+        t_key = t_name.lower()
+        if t_key in seen_titles:
+            continue
+        seen_titles.add(t_key)
+        recommendations.append({
+            "track_name": t_name,
+            "artists": str(row["artists"]),
+            "track_genre": str(row.get("track_genre", "Pop")),
+        })
+        if len(recommendations) >= number:
+            break
 
-    return result.to_dict(orient="records")
+    return recommendations
 
 
 def recommend_by_mood(mood, number=10):
@@ -116,9 +155,6 @@ def recommend_by_mood(mood, number=10):
         "artists",
         "track_genre"
     ]].to_dict(orient="records")
-
-#playlist generator 
-
 
 
 def generate_playlist(mood, number=15, genre=None):
@@ -184,7 +220,6 @@ def generate_playlist(mood, number=15, genre=None):
             remaining.head(number - len(playlist))
         ])
 
-    
     # Prepare playlist details with song durations
     result = playlist[
         ["track_name", "artists", "track_genre", "duration_ms"]
@@ -211,5 +246,3 @@ def generate_playlist(mood, number=15, genre=None):
         "total_duration_minutes": round(total_duration_seconds / 60, 2),
         "songs": songs_data.to_dict(orient="records")
     }
-
-

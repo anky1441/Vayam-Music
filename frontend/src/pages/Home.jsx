@@ -273,12 +273,12 @@ function Home() {
     const navigate = useNavigate();
     const { playSong } = usePlayer();
     const {
-        likedSongs,
-        playlists,
-        isLiked,
-        toggleLike,
-        createPlaylist: createPlaylistInLib,
-    } = useLibrary();
+        likedSongs = [],
+        playlists = [],
+        isLiked = () => false,
+        toggleLike = () => {},
+        createPlaylist: createPlaylistInLib = () => null,
+    } = useLibrary() || {};
 
     const [activeView, setActiveView] = useState(
         location.state?.view || "home"

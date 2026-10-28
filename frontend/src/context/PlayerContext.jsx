@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
-import { ML_BASE_URL } from "../api/musicApi";
+import { ML_BASE_URL, getSimilarRecommendations } from "../api/musicApi";
 import { sameId, unwrapSong } from "../utils/music";
 
 const isSoundEffectUrl = (url) => {
@@ -7,7 +7,26 @@ const isSoundEffectUrl = (url) => {
     return url.includes("actions.google.com/sounds") || url.includes("soundhelix.com");
 };
 
-const PlayerContext = createContext();
+const defaultPlayerContext = {
+    currentSong: null,
+    isPlaying: false,
+    isLoadingAudio: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 0.8,
+    queue: [],
+    queueIndex: -1,
+    playSong: () => {},
+    playNext: () => {},
+    playPrevious: () => {},
+    togglePlay: () => {},
+    seek: () => {},
+    changeVolume: () => {},
+    hasNext: false,
+    hasPrevious: false,
+};
+
+const PlayerContext = createContext(defaultPlayerContext);
 
 export function PlayerProvider({ children }) {
     const audioRef = useRef(new Audio());
@@ -202,12 +221,51 @@ export function PlayerProvider({ children }) {
         }
     };
 
-    // Play next song in the active queue
-    const playNext = useCallback(() => {
+    // Play next song in the active queue (with AI auto-recommendation when reaching the end)
+    const playNext = useCallback(async () => {
         const curQ = queueRef.current;
         const curIdx = queueIndexRef.current;
         if (!curQ || curQ.length === 0) return;
 
+        // 1. If there is an upcoming song in the queue, play it immediately
+        if (curIdx < curQ.length - 1) {
+            const nextSong = curQ[curIdx + 1];
+            if (nextSong) {
+                playSong(nextSong);
+            }
+            return;
+        }
+
+        // 2. Reached the end of queue (or single song): automatically query ML recommendation engine
+        const currentSongObj = curQ[curIdx];
+        if (currentSongObj?.title) {
+            try {
+                const similarSongs = await getSimilarRecommendations(currentSongObj.title, 5);
+                if (Array.isArray(similarSongs) && similarSongs.length > 0) {
+                    const newTracks = similarSongs.filter(
+                        (s) =>
+                            !curQ.some(
+                                (existing) =>
+                                    sameId(existing.id, s.id) ||
+                                    (existing.title?.toLowerCase() === s.title?.toLowerCase() &&
+                                     existing.artist?.toLowerCase() === s.artist?.toLowerCase())
+                            )
+                    );
+
+                    if (newTracks.length > 0) {
+                        const expandedQueue = [...curQ, ...newTracks];
+                        setQueue(expandedQueue);
+                        queueRef.current = expandedQueue;
+                        playSong(newTracks[0]);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("Recommendation auto-advance fallback:", err);
+            }
+        }
+
+        // 3. Fallback: Loop to beginning of queue
         const nextIdx = (curIdx + 1) % curQ.length;
         const nextSong = curQ[nextIdx];
         if (nextSong) {
@@ -298,4 +356,4 @@ export function PlayerProvider({ children }) {
     );
 }
 
-export const usePlayer = () => useContext(PlayerContext);
+export const usePlayer = () => useContext(PlayerContext) || defaultPlayerContext;
