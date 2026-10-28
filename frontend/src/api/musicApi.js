@@ -142,7 +142,12 @@ export const removePlaylistMember = (id, userId) =>
    ========================================================================== */
 
 export const ML_BASE_URL =
-  import.meta.env.VITE_ML_API_URL || "http://localhost:8000";
+  import.meta.env.VITE_ML_API_URL ||
+  (typeof window !== "undefined" &&
+  window.location.hostname !== "localhost" &&
+  window.location.hostname !== "127.0.0.1"
+    ? "https://vayam-music-ml-api.onrender.com"
+    : "http://localhost:8000");
 
 /**
  * Extracts visual aesthetic coordinates (luminance, warmth, saturation, valence, energy)

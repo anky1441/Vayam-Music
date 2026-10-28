@@ -145,30 +145,47 @@ export function PlayerProvider({ children }) {
 
             // 2. Fetch live full stream URL from YouTube streaming engine (Google CDN m4a)
             if (!streamUrl) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 12000);
-                    const response = await fetch(
-                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
-                            unwrapped.title
-                        )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
-                        { signal: controller.signal }
-                    );
-                    clearTimeout(timeoutId);
+                const candidateEndpoints = [
+                    ML_BASE_URL,
+                    "https://vayam-music-ml-api.onrender.com",
+                    "http://localhost:8000"
+                ].filter(Boolean);
+                const uniqueEndpoints = [...new Set(candidateEndpoints)];
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.stream_url) {
-                            streamUrl = data.stream_url;
+                for (const endpoint of uniqueEndpoints) {
+                    if (streamUrl) break;
+                    const isMixed =
+                        typeof window !== "undefined" &&
+                        window.location.protocol === "https:" &&
+                        endpoint.startsWith("http://");
+                    if (isMixed) continue;
+
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 20000);
+                        const response = await fetch(
+                            `${endpoint}/audio/stream?title=${encodeURIComponent(
+                                unwrapped.title
+                            )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
+                            { signal: controller.signal }
+                        );
+                        clearTimeout(timeoutId);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.stream_url) {
+                                streamUrl = data.stream_url;
+                            }
+                            if (data.thumbnail && !unwrapped.coverUrl) {
+                                setCurrentSong((prev) =>
+                                    prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                                );
+                            }
+                            break;
                         }
-                        if (data.thumbnail && !unwrapped.coverUrl) {
-                            setCurrentSong((prev) =>
-                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
-                            );
-                        }
+                    } catch (backendErr) {
+                        console.warn(`YouTube stream fetch error from ${endpoint}:`, backendErr);
                     }
-                } catch (backendErr) {
-                    console.warn("YouTube streaming engine fetch error:", backendErr);
                 }
             }
 

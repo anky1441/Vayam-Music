@@ -37,7 +37,12 @@ def get_audio_stream(title: str, artist: str = "") -> Dict[str, Any]:
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
-        "socket_timeout": 8,
+        "socket_timeout": 12,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb", "web"]
+            }
+        },
     }
 
     try:
