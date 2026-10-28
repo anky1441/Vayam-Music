@@ -2,9 +2,15 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback } f
 import { ML_BASE_URL, getSimilarRecommendations } from "../api/musicApi";
 import { sameId, unwrapSong } from "../utils/music";
 
-const isSoundEffectUrl = (url) => {
-    if (!url || typeof url !== "string") return false;
-    return url.includes("actions.google.com/sounds") || url.includes("soundhelix.com");
+const isAudioPreviewOrPlaceholder = (url) => {
+    if (!url || typeof url !== "string") return true;
+    return (
+        url.includes("actions.google.com/sounds") ||
+        url.includes("soundhelix.com") ||
+        url.includes("apple.com") ||
+        url.includes("itunes") ||
+        url.includes("mzstatic.com")
+    );
 };
 
 const defaultPlayerContext = {
@@ -132,49 +138,42 @@ export function PlayerProvider({ children }) {
         try {
             let streamUrl = null;
 
-            // 1. If song already has a direct valid audio stream that is NOT a placeholder sound effect, use it!
-            if (unwrapped.audioUrl && !isSoundEffectUrl(unwrapped.audioUrl)) {
+            // 1. If song already has a direct valid audio stream that is NOT a placeholder or 30s preview, use it!
+            if (unwrapped.audioUrl && !isAudioPreviewOrPlaceholder(unwrapped.audioUrl)) {
                 streamUrl = unwrapped.audioUrl;
             }
 
-            // 2. Fetch live full stream URL from YouTube streaming engine
+            // 2. Fetch live full stream URL from YouTube streaming engine (Google CDN m4a)
             if (!streamUrl) {
-                const isMixedContent =
-                    typeof window !== "undefined" &&
-                    window.location.protocol === "https:" &&
-                    ML_BASE_URL.startsWith("http://");
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 12000);
+                    const response = await fetch(
+                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
+                            unwrapped.title
+                        )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
+                        { signal: controller.signal }
+                    );
+                    clearTimeout(timeoutId);
 
-                if (!isMixedContent) {
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 10000);
-                        const response = await fetch(
-                            `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
-                                unwrapped.title
-                            )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
-                            { signal: controller.signal }
-                        );
-                        clearTimeout(timeoutId);
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.stream_url) {
-                                streamUrl = data.stream_url;
-                            }
-                            if (data.thumbnail && !unwrapped.coverUrl) {
-                                setCurrentSong((prev) =>
-                                    prev ? { ...prev, coverUrl: data.thumbnail } : prev
-                                );
-                            }
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.stream_url) {
+                            streamUrl = data.stream_url;
                         }
-                    } catch (backendErr) {
-                        console.warn("YouTube streaming engine fetch error:", backendErr);
+                        if (data.thumbnail && !unwrapped.coverUrl) {
+                            setCurrentSong((prev) =>
+                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                            );
+                        }
                     }
+                } catch (backendErr) {
+                    console.warn("YouTube streaming engine fetch error:", backendErr);
                 }
             }
 
-            // 3. Fallback: If YouTube stream is unreachable, resolve public catalog audio stream
-            if (!streamUrl || !unwrapped.coverUrl) {
+            // 3. Fallback for HD cover art ONLY (NEVER use Apple preview audio for playback!)
+            if (!unwrapped.coverUrl) {
                 try {
                     const queryTerm = encodeURIComponent(
                         `${unwrapped.title} ${unwrapped.artist || ""}`.trim()
@@ -185,10 +184,7 @@ export function PlayerProvider({ children }) {
                     if (catRes.ok) {
                         const catData = await catRes.json();
                         const hit = catData.results?.[0];
-                        if (!streamUrl && hit?.previewUrl) {
-                            streamUrl = hit.previewUrl;
-                        }
-                        if (!unwrapped.coverUrl && hit?.artworkUrl100) {
+                        if (hit?.artworkUrl100) {
                             const cover = hit.artworkUrl100.replace("100x100bb", "600x600bb");
                             setCurrentSong((prev) =>
                                 prev ? { ...prev, coverUrl: cover } : prev
@@ -196,12 +192,12 @@ export function PlayerProvider({ children }) {
                         }
                     }
                 } catch (catErr) {
-                    console.warn("Catalog audio stream fallback failed:", catErr);
+                    console.warn("Catalog cover art fallback error:", catErr);
                 }
             }
 
             if (!streamUrl) {
-                throw new Error(`Unable to resolve playable audio stream for "${unwrapped.title}".`);
+                throw new Error(`Unable to resolve YouTube audio stream for "${unwrapped.title}". Please ensure the audio streaming service is active.`);
             }
 
             audio.src = streamUrl;

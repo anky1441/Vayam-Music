@@ -393,7 +393,7 @@ export const matchStorySong = async (formData) => {
             track_genre: item.primaryGenreName || aesthetics.suggested_genre,
             popularity: Math.floor(Math.random() * 12) + 82,
             coverUrl: item.artworkUrl100 ? item.artworkUrl100.replace("100x100bb", "600x600bb") : "",
-            audioUrl: item.previewUrl || "",
+            audioUrl: "", // Full audio is resolved via YouTube streaming engine
           });
         }
       }
@@ -415,7 +415,7 @@ export const matchStorySong = async (formData) => {
         track_genre: aesthetics.suggested_genre,
         popularity: 90,
         coverUrl: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500",
-        audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        audioUrl: "",
       },
       {
         id: "fb_2",
@@ -427,7 +427,7 @@ export const matchStorySong = async (formData) => {
         track_genre: "Midnight Lo-Fi",
         popularity: 86,
         coverUrl: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500",
-        audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        audioUrl: "",
       },
       {
         id: "fb_3",
@@ -439,7 +439,7 @@ export const matchStorySong = async (formData) => {
         track_genre: "Acoustic Chill",
         popularity: 88,
         coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500",
-        audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        audioUrl: "",
       },
     ];
   }
