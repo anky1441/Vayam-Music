@@ -2,14 +2,11 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback } f
 import { ML_BASE_URL, getSimilarRecommendations } from "../api/musicApi";
 import { sameId, unwrapSong } from "../utils/music";
 
-const isAudioPreviewOrPlaceholder = (url) => {
+const isSoundEffectUrl = (url) => {
     if (!url || typeof url !== "string") return true;
     return (
         url.includes("actions.google.com/sounds") ||
-        url.includes("soundhelix.com") ||
-        url.includes("apple.com") ||
-        url.includes("itunes") ||
-        url.includes("mzstatic.com")
+        url.includes("soundhelix.com")
     );
 };
 
@@ -138,8 +135,8 @@ export function PlayerProvider({ children }) {
         try {
             let streamUrl = null;
 
-            // 1. If song already has a direct valid audio stream that is NOT a placeholder or 30s preview, use it!
-            if (unwrapped.audioUrl && !isAudioPreviewOrPlaceholder(unwrapped.audioUrl)) {
+            // 1. If song already has a direct valid audio stream that is NOT a placeholder sound effect, use it!
+            if (unwrapped.audioUrl && !isSoundEffectUrl(unwrapped.audioUrl)) {
                 streamUrl = unwrapped.audioUrl;
             }
 
@@ -162,7 +159,7 @@ export function PlayerProvider({ children }) {
 
                     try {
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 20000);
+                        const timeoutId = setTimeout(() => controller.abort(), 6000);
                         const response = await fetch(
                             `${endpoint}/audio/stream?title=${encodeURIComponent(
                                 unwrapped.title
@@ -189,8 +186,8 @@ export function PlayerProvider({ children }) {
                 }
             }
 
-            // 3. Fallback for HD cover art ONLY (NEVER use Apple preview audio for playback!)
-            if (!unwrapped.coverUrl) {
+            // 3. Fallback: If YouTube stream is unreachable, resolve public catalog audio stream & HD cover art
+            if (!streamUrl || !unwrapped.coverUrl) {
                 try {
                     const queryTerm = encodeURIComponent(
                         `${unwrapped.title} ${unwrapped.artist || ""}`.trim()
@@ -201,7 +198,10 @@ export function PlayerProvider({ children }) {
                     if (catRes.ok) {
                         const catData = await catRes.json();
                         const hit = catData.results?.[0];
-                        if (hit?.artworkUrl100) {
+                        if (!streamUrl && hit?.previewUrl) {
+                            streamUrl = hit.previewUrl;
+                        }
+                        if (hit?.artworkUrl100 && !unwrapped.coverUrl) {
                             const cover = hit.artworkUrl100.replace("100x100bb", "600x600bb");
                             setCurrentSong((prev) =>
                                 prev ? { ...prev, coverUrl: cover } : prev
@@ -209,12 +209,12 @@ export function PlayerProvider({ children }) {
                         }
                     }
                 } catch (catErr) {
-                    console.warn("Catalog cover art fallback error:", catErr);
+                    console.warn("Catalog audio stream fallback failed:", catErr);
                 }
             }
 
             if (!streamUrl) {
-                throw new Error(`Unable to resolve YouTube audio stream for "${unwrapped.title}". Please ensure the audio streaming service is active.`);
+                throw new Error(`Unable to resolve playable audio stream for "${unwrapped.title}".`);
             }
 
             audio.src = streamUrl;
