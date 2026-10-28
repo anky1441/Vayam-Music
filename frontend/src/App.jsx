@@ -1,7 +1,6 @@
 import { PlayerProvider } from "./context/PlayerContext";
 import { LibraryProvider } from "./context/LibraryContext";
 import Player from "./components/Player";
-import ErrorBoundary from "./components/ErrorBoundary";
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
 
@@ -37,21 +36,19 @@ function LandingPage() {
 
 function App() {
   return (
-    <ErrorBoundary>
-      <PlayerProvider>
-        <LibraryProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/collab" element={<CollabPlaylists />} />
-          </Routes>
-          <Player />
-        </LibraryProvider>
-      </PlayerProvider>
-    </ErrorBoundary>
+    <PlayerProvider>
+      <LibraryProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/collab" element={<CollabPlaylists />} />
+        </Routes>
+        <Player />
+      </LibraryProvider>
+    </PlayerProvider>
   );
 }
 
