@@ -116,18 +116,38 @@ export default function StorySong({ onPlaySong }) {
   };
 
   const handlePlayTrack = (track) => {
+    const title = track.track_name || track.title;
+    const artist = track.artists || track.artist;
+    const genre = track.track_genre || track.genre || "Pop";
+    const coverUrl = track.coverUrl || track.cover_url || null;
+    const audioUrl = track.audioUrl || track.audio_url || "";
+
     const songPayload = {
-      id: track.track_name + "_" + track.artists,
-      title: track.track_name,
-      artist: track.artists,
-      genre: track.track_genre,
-      coverUrl: null, // Audio streamer will extract matching art
+      id: track.id || `${title}_${artist}`,
+      title,
+      artist,
+      genre,
+      coverUrl,
+      audioUrl,
     };
 
+    const queueList = (recommendations || []).map((t) => {
+      const tTitle = t.track_name || t.title;
+      const tArtist = t.artists || t.artist;
+      return {
+        id: t.id || `${tTitle}_${tArtist}`,
+        title: tTitle,
+        artist: tArtist,
+        genre: t.track_genre || t.genre || "Pop",
+        coverUrl: t.coverUrl || t.cover_url || null,
+        audioUrl: t.audioUrl || t.audio_url || "",
+      };
+    });
+
     if (onPlaySong) {
-      onPlaySong(songPayload, (recommendations || []).map((t) => ({ id: t.track_name + "_" + t.artists, title: t.track_name, artist: t.artists, genre: t.track_genre })));
+      onPlaySong(songPayload, queueList);
     } else {
-      playSong(songPayload, (recommendations || []).map((t) => ({ id: t.track_name + "_" + t.artists, title: t.track_name, artist: t.artists, genre: t.track_genre })));
+      playSong(songPayload, queueList);
     }
   };
 
@@ -336,24 +356,37 @@ export default function StorySong({ onPlaySong }) {
 
           <div className="storysong-grid">
             {recommendations.map((track, idx) => {
-              const isCurrent = currentSong?.title === track.track_name;
+              const title = track.track_name || track.title;
+              const artist = track.artists || track.artist;
+              const genre = track.track_genre || track.genre;
+              const coverUrl = track.coverUrl || track.cover_url;
+              const isCurrent = currentSong?.title === title;
               return (
                 <article
-                  key={idx}
+                  key={track.id || idx}
                   className={`storysong-card ${isCurrent ? "playing" : ""}`}
                 >
                   <div className="storysong-card-top">
-                    <div className="storysong-card-art">♫</div>
+                    {coverUrl ? (
+                      <img
+                        src={coverUrl}
+                        alt=""
+                        className="storysong-card-art"
+                        style={{ objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div className="storysong-card-art">♫</div>
+                    )}
                     <div className="storysong-card-info">
-                      <h3 title={track.track_name}>{track.track_name}</h3>
-                      <p title={track.artists}>{track.artists}</p>
+                      <h3 title={title}>{title}</h3>
+                      <p title={artist}>{artist}</p>
                     </div>
                   </div>
 
                   <div className="storysong-card-tags">
-                    {track.track_genre && (
+                    {genre && (
                       <span className="storysong-genre-tag">
-                        {track.track_genre}
+                        {genre}
                       </span>
                     )}
                     {typeof track.popularity === "number" && (
