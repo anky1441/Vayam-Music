@@ -158,7 +158,7 @@ function Navbar({ onProfileClick, onHomeClick, onSearch, searchQuery = "" }) {
 
   const handleSelectSong = (song) => {
     setShowDropdown(false);
-    playSong(song);
+    playSong(song, searchResults);
   };
 
   const handleSearchSubmit = (event) => {

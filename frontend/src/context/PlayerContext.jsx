@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useRef, useEffect } from "react";
+import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
 import { ML_BASE_URL } from "../api/musicApi";
+import { sameId, unwrapSong } from "../utils/music";
 
 const isSoundEffectUrl = (url) => {
     if (!url || typeof url !== "string") return false;
@@ -17,6 +18,22 @@ export function PlayerProvider({ children }) {
     const [volume, setVolume] = useState(0.8);
     const [isLoadingAudio, setIsLoadingAudio] = useState(false);
 
+    // Queue management state
+    const [queue, setQueue] = useState([]);
+    const [queueIndex, setQueueIndex] = useState(-1);
+
+    const queueRef = useRef([]);
+    const queueIndexRef = useRef(-1);
+    const playNextRef = useRef();
+
+    useEffect(() => {
+        queueRef.current = queue;
+    }, [queue]);
+
+    useEffect(() => {
+        queueIndexRef.current = queueIndex;
+    }, [queueIndex]);
+
     // Configure audio listeners
     useEffect(() => {
         const audio = audioRef.current;
@@ -29,7 +46,13 @@ export function PlayerProvider({ children }) {
             setIsLoadingAudio(false);
             setIsPlaying(true);
         };
-        const handleEnded = () => setIsPlaying(false);
+        const handleEnded = () => {
+            setIsPlaying(false);
+            // Automatically advance to the next track if a queue exists
+            if (playNextRef.current) {
+                playNextRef.current();
+            }
+        };
 
         audio.addEventListener("timeupdate", handleTimeUpdate);
         audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -44,114 +67,185 @@ export function PlayerProvider({ children }) {
             audio.removeEventListener("playing", handlePlaying);
             audio.removeEventListener("ended", handleEnded);
         };
-    }, []);
+    }, [volume]);
 
-    // Play a specific song
-    const playSong = async (song) => {
-    if (!song) return;
-    const audio = audioRef.current;
+    // Play a specific song and optionally update the active queue
+    const playSong = async (song, newQueue = null) => {
+        if (!song) return;
+        const unwrapped = unwrapSong(song);
+        const audio = audioRef.current;
 
-    setCurrentSong(song);
-    setIsLoadingAudio(true);
+        // Handle Queue logic
+        let currentQ = queueRef.current;
+        let targetIdx = -1;
 
-    try {
-        let streamUrl = null;
-
-        // 1. If song already has a direct valid audio stream that is NOT a placeholder sound effect, use it!
-        if (song.audioUrl && !isSoundEffectUrl(song.audioUrl)) {
-            streamUrl = song.audioUrl;
+        if (newQueue && Array.isArray(newQueue) && newQueue.length > 0) {
+            const cleanQueue = newQueue.map((item) => unwrapSong(item));
+            setQueue(cleanQueue);
+            queueRef.current = cleanQueue;
+            currentQ = cleanQueue;
+            targetIdx = cleanQueue.findIndex(
+                (s) =>
+                    sameId(s.id, unwrapped.id) ||
+                    (s.title === unwrapped.title && (!unwrapped.artist || s.artist === unwrapped.artist))
+            );
+            if (targetIdx === -1) targetIdx = 0;
+        } else {
+            // Check if unwrapped song already exists in current queue
+            targetIdx = currentQ.findIndex(
+                (s) =>
+                    sameId(s.id, unwrapped.id) ||
+                    (s.title === unwrapped.title && (!unwrapped.artist || s.artist === unwrapped.artist))
+            );
+            if (targetIdx === -1) {
+                const updated = [...currentQ, unwrapped];
+                setQueue(updated);
+                queueRef.current = updated;
+                targetIdx = updated.length - 1;
+            }
         }
 
-        // 2. Fetch live full stream URL from YouTube streaming engine
-        if (!streamUrl) {
-            const isMixedContent =
-                typeof window !== "undefined" &&
-                window.location.protocol === "https:" &&
-                ML_BASE_URL.startsWith("http://");
+        setQueueIndex(targetIdx);
+        queueIndexRef.current = targetIdx;
+        setCurrentSong(unwrapped);
+        setIsLoadingAudio(true);
 
-            if (!isMixedContent) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    const response = await fetch(
-                        `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
-                            song.title
-                        )}&artist=${encodeURIComponent(song.artist || "")}`,
-                        { signal: controller.signal }
-                    );
-                    clearTimeout(timeoutId);
+        try {
+            let streamUrl = null;
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.stream_url) {
-                            streamUrl = data.stream_url;
+            // 1. If song already has a direct valid audio stream that is NOT a placeholder sound effect, use it!
+            if (unwrapped.audioUrl && !isSoundEffectUrl(unwrapped.audioUrl)) {
+                streamUrl = unwrapped.audioUrl;
+            }
+
+            // 2. Fetch live full stream URL from YouTube streaming engine
+            if (!streamUrl) {
+                const isMixedContent =
+                    typeof window !== "undefined" &&
+                    window.location.protocol === "https:" &&
+                    ML_BASE_URL.startsWith("http://");
+
+                if (!isMixedContent) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
+                        const response = await fetch(
+                            `${ML_BASE_URL}/audio/stream?title=${encodeURIComponent(
+                                unwrapped.title
+                            )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
+                            { signal: controller.signal }
+                        );
+                        clearTimeout(timeoutId);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.stream_url) {
+                                streamUrl = data.stream_url;
+                            }
+                            if (data.thumbnail && !unwrapped.coverUrl) {
+                                setCurrentSong((prev) =>
+                                    prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                                );
+                            }
                         }
-                        if (data.thumbnail && !song.coverUrl) {
+                    } catch (backendErr) {
+                        console.warn("YouTube streaming engine fetch error:", backendErr);
+                    }
+                }
+            }
+
+            // 3. Fallback: If YouTube stream is unreachable, resolve public catalog audio stream
+            if (!streamUrl || !unwrapped.coverUrl) {
+                try {
+                    const queryTerm = encodeURIComponent(
+                        `${unwrapped.title} ${unwrapped.artist || ""}`.trim()
+                    );
+                    const catRes = await fetch(
+                        `https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`
+                    );
+                    if (catRes.ok) {
+                        const catData = await catRes.json();
+                        const hit = catData.results?.[0];
+                        if (!streamUrl && hit?.previewUrl) {
+                            streamUrl = hit.previewUrl;
+                        }
+                        if (!unwrapped.coverUrl && hit?.artworkUrl100) {
+                            const cover = hit.artworkUrl100.replace("100x100bb", "600x600bb");
                             setCurrentSong((prev) =>
-                                prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                                prev ? { ...prev, coverUrl: cover } : prev
                             );
                         }
                     }
-                } catch (backendErr) {
-                    console.warn(
-                        "YouTube streaming engine fetch error:",
-                        backendErr
-                    );
+                } catch (catErr) {
+                    console.warn("Catalog audio stream fallback failed:", catErr);
                 }
             }
-        }
 
-        // 3. Fallback: If YouTube stream is unreachable (e.g. remote visitor on live site or ML server offline),
-        // resolve HD cover & public catalog audio stream so music ALWAYS plays for normal visitors
-        if (!streamUrl || !song.coverUrl) {
+            if (!streamUrl) {
+                throw new Error(`Unable to resolve playable audio stream for "${unwrapped.title}".`);
+            }
+
+            audio.src = streamUrl;
+            audio.load();
             try {
-                const queryTerm = encodeURIComponent(
-                    `${song.title} ${song.artist || ""}`.trim()
-                );
-                const catRes = await fetch(
-                    `https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`
-                );
-                if (catRes.ok) {
-                    const catData = await catRes.json();
-                    const hit = catData.results?.[0];
-                    if (!streamUrl && hit?.previewUrl) {
-                        streamUrl = hit.previewUrl;
-                    }
-                    if (!song.coverUrl && hit?.artworkUrl100) {
-                        const cover = hit.artworkUrl100.replace(
-                            "100x100bb",
-                            "600x600bb"
-                        );
-                        setCurrentSong((prev) =>
-                            prev ? { ...prev, coverUrl: cover } : prev
-                        );
-                    }
-                }
-            } catch (catErr) {
-                console.warn("Catalog audio stream fallback failed:", catErr);
+                await audio.play();
+                setIsPlaying(true);
+            } catch (playErr) {
+                console.warn("Direct play error:", playErr);
+                setIsPlaying(!audio.paused);
             }
+        } catch (err) {
+            console.error("Playback error:", err);
+            setIsPlaying(false);
+        } finally {
+            setIsLoadingAudio(false);
         }
-
-        if (!streamUrl) {
-            throw new Error(`Unable to resolve playable audio stream for "${song.title}".`);
-        }
-
-        audio.src = streamUrl;
-        audio.load();
-        try {
-            await audio.play();
-            setIsPlaying(true);
-        } catch (playErr) {
-            console.warn("Direct play error:", playErr);
-            setIsPlaying(!audio.paused);
-        }
-    } catch (err) {
-        console.error("Playback error:", err);
-        setIsPlaying(false);
-    } finally {
-        setIsLoadingAudio(false);
-    }
     };
+
+    // Play next song in the active queue
+    const playNext = useCallback(() => {
+        const curQ = queueRef.current;
+        const curIdx = queueIndexRef.current;
+        if (!curQ || curQ.length === 0) return;
+
+        const nextIdx = (curIdx + 1) % curQ.length;
+        const nextSong = curQ[nextIdx];
+        if (nextSong) {
+            playSong(nextSong);
+        }
+    }, []);
+
+    // Reverse / Previous playback
+    const playPrevious = useCallback(() => {
+        const audio = audioRef.current;
+
+        // Standard Reverse Behavior: If played > 3 seconds, replay from start (0:00)
+        if (audio && audio.currentTime > 3) {
+            audio.currentTime = 0;
+            setCurrentTime(0);
+            if (audio.paused) {
+                audio.play().catch(console.error);
+                setIsPlaying(true);
+            }
+            return;
+        }
+
+        // If played <= 3 seconds, go to previous track in queue
+        const curQ = queueRef.current;
+        const curIdx = queueIndexRef.current;
+        if (!curQ || curQ.length === 0) return;
+
+        const prevIdx = curIdx > 0 ? curIdx - 1 : curQ.length - 1;
+        const prevSong = curQ[prevIdx];
+        if (prevSong) {
+            playSong(prevSong);
+        }
+    }, []);
+
+    // Keep playNextRef up to date for handleEnded listener
+    useEffect(() => {
+        playNextRef.current = playNext;
+    }, [playNext]);
 
     const togglePlay = () => {
         const audio = audioRef.current;
@@ -187,10 +281,16 @@ export function PlayerProvider({ children }) {
                 currentTime,
                 duration,
                 volume,
+                queue,
+                queueIndex,
                 playSong,
+                playNext,
+                playPrevious,
                 togglePlay,
                 seek,
                 changeVolume,
+                hasNext: queue.length > 1,
+                hasPrevious: queue.length > 1 || currentTime > 3,
             }}
         >
             {children}

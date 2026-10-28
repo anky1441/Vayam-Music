@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
+import { useLibrary } from "../context/LibraryContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 import LikedSongs from "./dashboard/LikedSongs.jsx";
 import MyPlaylists from "./dashboard/MyPlaylists.jsx";
 import CreatePlaylist from "./dashboard/CreatePlaylists.jsx";
+import PlaylistDetails from "./dashboard/PlaylistDetails.jsx";
 import Profile from "./dashboard/Profile.jsx";
 import CollabPlaylists from "./CollabPlaylists.jsx";
 import StorySong from "./dashboard/StorySong.jsx";
 
-import { getSongs, getLikedSongs, getUserPlaylists, searchCatalogSongs } from "../api/musicApi";
-import { isAuthenticated } from "../api/api";
+import {
+    getSongs,
+    searchCatalogSongs,
+} from "../api/musicApi";
+import { sameId } from "../utils/music";
 
 import "./Home.css";
 import "./dashboard/DashboardContent.css";
@@ -22,7 +27,8 @@ function HomeDiscovery({
     songsLoading,
     songsError,
     onLike,
-    likedSongs,
+    isLikedSong,
+    likedSongs = [],
     searchQuery = "",
     catalogSongs = [],
     onClearSearch,
@@ -188,14 +194,14 @@ function HomeDiscovery({
                     <div className="song-grid">
                         {displaySongs.map((song) => {
                             const songId = song.id || song._id;
-                            const isLiked = likedSongs.some(
-                                (id) => String(id) === String(songId)
-                            );
+                            const isLiked = isLikedSong
+                                ? isLikedSong(song)
+                                : likedSongs.some((id) => sameId(id, songId));
                             return (
                                 <article
                                     className="song-card"
-                                    key={songId}
-                                    onClick={() => playSong(song)}
+                                    key={songId || `${song.title}-${song.artist}`}
+                                    onClick={() => playSong(song, displaySongs)}
                                     style={{ cursor: "pointer" }}
                                 >
                                     <div className="song-art">
@@ -219,7 +225,7 @@ function HomeDiscovery({
                                         className={`dashboard-heart ${isLiked ? "liked" : ""}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onLike(songId);
+                                            onLike(song);
                                         }}
                                         aria-label={`Like ${song.title}`}
                                     >
@@ -262,87 +268,17 @@ function HomeDiscovery({
     );
 }
 
-function PlaylistDetails({ playlist, songs, onBack }) {
-    const { playSong } = usePlayer();
-    const playlistSongIds = Array.isArray(playlist.songs) ? playlist.songs : [];
-
-    const playlistSongs = songs.filter((song) =>
-        playlistSongIds.includes(song.id || song._id)
-    );
-
-    return (
-        <section className="dashboard-view">
-            <button
-                type="button"
-                className="dashboard-add-button"
-                onClick={onBack}
-            >
-                ← My Playlists
-            </button>
-
-            <p className="dashboard-eyebrow" style={{ marginTop: 24 }}>
-                YOUR PLAYLIST
-            </p>
-
-            <h1>{playlist.name || playlist.title}</h1>
-
-            <p className="dashboard-subtitle">
-                {playlist.description || "Your personal music collection"} ·{" "}
-                {playlistSongs.length} songs
-            </p>
-
-            {playlistSongs.length === 0 ? (
-                <div className="dashboard-empty">
-                    <span className="dashboard-big-icon">♫</span>
-                    <h2>This playlist is empty</h2>
-                    <p>You can add songs when creating a playlist.</p>
-                </div>
-            ) : (
-                <div className="dashboard-song-list">
-                    {playlistSongs.map((song) => (
-                        <div
-                            className="dashboard-song"
-                            key={song.id || song._id}
-                            onClick={() => playSong(song)}
-                            style={{ cursor: "pointer" }}
-                        >
-                            <div className="dashboard-song-art">
-                                {song.coverUrl || song.coverImage ? (
-                                    <img
-                                        src={song.coverUrl || song.coverImage}
-                                        alt={song.title}
-                                        className="song-cover-image"
-                                    />
-                                ) : (
-                                    "♫"
-                                )}
-                            </div>
-
-                            <div className="dashboard-song-info">
-                                <h3>{song.title}</h3>
-                                <p>{song.artist}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </section>
-    );
-}
-
-function readLocalStorage(key, fallback) {
-    try {
-        const savedData = localStorage.getItem(key);
-        return savedData ? JSON.parse(savedData) : fallback;
-    } catch {
-        return fallback;
-    }
-}
-
 function Home() {
     const location = useLocation();
     const navigate = useNavigate();
     const { playSong } = usePlayer();
+    const {
+        likedSongs,
+        playlists,
+        isLiked,
+        toggleLike,
+        createPlaylist: createPlaylistInLib,
+    } = useLibrary();
 
     const [activeView, setActiveView] = useState(
         location.state?.view || "home"
@@ -385,16 +321,6 @@ function Home() {
         };
     }, [searchQuery]);
 
-    // Likes from localStorage (or database if authenticated)
-    const [likedSongs, setLikedSongs] = useState(() =>
-        readLocalStorage("vayam-liked-songs", [])
-    );
-
-    // Playlists
-    const [playlists, setPlaylists] = useState(() =>
-        readLocalStorage("vayam-playlists", [])
-    );
-
     const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
 
     // Fetch songs
@@ -428,58 +354,27 @@ function Home() {
 
         fetchSongs();
 
-        // Also sync user's online likes and playlists if logged in
-        if (isAuthenticated()) {
-            getLikedSongs()
-                .then((res) => {
-                    if (isMounted && Array.isArray(res.data)) {
-                        setLikedSongs(res.data.map((s) => s.id || s));
-                    }
-                })
-                .catch(() => {});
-
-            getUserPlaylists()
-                .then((res) => {
-                    if (isMounted && Array.isArray(res.data)) {
-                        setPlaylists(res.data);
-                    }
-                })
-                .catch(() => {});
-        }
-
         return () => {
             isMounted = false;
         };
     }, []);
 
-    // Save likes locally
-    useEffect(() => {
-        localStorage.setItem("vayam-liked-songs", JSON.stringify(likedSongs));
-    }, [likedSongs]);
+    async function handleCreatePlaylist(data) {
+        const songIds = data.songIds || (Array.isArray(data.songs) ? data.songs.map((s) => s?.id ?? s) : []);
+        const selectedSongObjs = songIds
+            .map((id) => songs.find((s) => sameId(s.id, id)))
+            .filter(Boolean);
 
-    // Save playlists locally
-    useEffect(() => {
-        localStorage.setItem("vayam-playlists", JSON.stringify(playlists));
-    }, [playlists]);
+        const newPlaylist = await createPlaylistInLib({
+            name: data.name,
+            description: data.description || "",
+            songs: selectedSongObjs,
+        });
 
-    function toggleLike(songId) {
-        setLikedSongs((current) =>
-            current.includes(songId)
-                ? current.filter((id) => id !== songId)
-                : [...current, songId]
-        );
-    }
-
-    function createPlaylist(data) {
-        const playlist = {
-            ...data,
-            id: `playlist-${Date.now()}`,
-            songs: Array.isArray(data.songs) ? data.songs : [],
-        };
-
-        setPlaylists((current) => [...current, playlist]);
-        setSelectedPlaylistId(playlist.id);
-        setActiveView("playlist-details");
+        if (newPlaylist) {
+            setSelectedPlaylistId(newPlaylist.id);
+            setActiveView("playlist-details");
+        }
     }
 
     function openView(view) {
@@ -536,7 +431,7 @@ function Home() {
                         <span>☷</span> My Playlists
                     </button>
 
-                    {/* Additional Feature: Collaborative Playlists */}
+                    {/* Collaborative Playlists */}
                     <button
                         type="button"
                         className={`library-item ${activeView === "collab" ? "active" : ""}`}
@@ -545,7 +440,7 @@ function Home() {
                         <span>♬</span> Collaborative Playlists
                     </button>
 
-                    {/* Additional Feature: AI StorySong */}
+                    {/* AI StorySong */}
                     <button
                         type="button"
                         className={`library-item ${activeView === "storysong" ? "active" : ""}`}
@@ -576,6 +471,7 @@ function Home() {
                             songsLoading={songsLoading}
                             songsError={songsError}
                             onLike={toggleLike}
+                            isLikedSong={isLiked}
                             likedSongs={likedSongs}
                             searchQuery={searchQuery}
                             catalogSongs={catalogSongs}
@@ -590,7 +486,7 @@ function Home() {
                             likedSongs={likedSongs}
                             likedItems={likedSongs}
                             onToggleLike={toggleLike}
-                            onPlaySong={playSong}
+                            onPlaySong={(song) => playSong(song, likedSongs)}
                         />
                     )}
 
@@ -608,7 +504,7 @@ function Home() {
                     {activeView === "create" && (
                         <CreatePlaylist
                             songs={songs}
-                            onCreatePlaylist={createPlaylist}
+                            onCreatePlaylist={handleCreatePlaylist}
                         />
                     )}
 
@@ -616,18 +512,26 @@ function Home() {
                         <PlaylistDetails
                             playlist={selectedPlaylist}
                             playlistId={selectedPlaylistId || selectedPlaylist?.id}
-                            songs={songs}
+                            availableSongs={songs}
                             onBack={() => openView("playlists")}
-                            onOpenSong={playSong}
+                            onOpenSong={(song, queue) =>
+                                playSong(song, queue || selectedPlaylist?.songs || songs)
+                            }
+                            isLiked={isLiked}
+                            onToggleLike={toggleLike}
+                            onChanged={() => {}}
+                            onDeleted={() => {
+                                openView("playlists");
+                            }}
                         />
                     )}
 
-                    {/* Additional Feature: Collaborative Playlists */}
+                    {/* Collaborative Playlists */}
                     {activeView === "collab" && <CollabPlaylists isEmbedded />}
 
-                    {/* Additional Feature: AI StorySong */}
+                    {/* AI StorySong */}
                     {activeView === "storysong" && (
-                        <StorySong onPlaySong={playSong} />
+                        <StorySong onPlaySong={(song, queue) => playSong(song, queue)} />
                     )}
 
                     {activeView === "profile" && (

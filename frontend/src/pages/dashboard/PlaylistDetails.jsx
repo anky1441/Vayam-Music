@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getApiErrorMessage } from "../../api/api";
+import { getApiErrorMessage, isAuthenticated } from "../../api/api";
 import {
   addPlaylistMember,
   addSongToPlaylist,
@@ -26,11 +26,17 @@ import {
 import "./DashboardContent.css";
 import "./Discover.css";
 
+// Helper to check if an ID is a backend database Long ID (numeric and not starting with 'playlist-')
+const isDatabaseId = (id) =>
+  (typeof id === "number" || (!isNaN(id) && !String(id).includes("-"))) &&
+  String(id).trim() !== "";
+
 // One playlist: songs, editing, deleting and (for shared playlists) members.
 // Used inside the Home shell and on the /collab/:id page.
 function PlaylistDetails({
   playlistId: passedId,
   playlist: initialPlaylist,
+  availableSongs = [],
   onBack,
   backLabel = "← My Playlists",
   onChanged,
@@ -41,11 +47,27 @@ function PlaylistDetails({
 }) {
   const playlistId = passedId || initialPlaylist?.id || initialPlaylist?._id;
   const [playlist, setPlaylist] = useState(initialPlaylist || null);
-  const [songs, setSongs] = useState(
-    Array.isArray(initialPlaylist?.songs)
-      ? initialPlaylist.songs.map(unwrapSong)
-      : []
+
+  const resolveSongs = useCallback(
+    (p) => {
+      const pSongs = Array.isArray(p?.songs) ? p.songs : [];
+      return pSongs
+        .map((item) => {
+          if (item && typeof item === "object") return unwrapSong(item);
+          return (
+            availableSongs.find((s) => sameId(s.id, item)) || {
+              id: item,
+              title: `Song #${item}`,
+              artist: "Unknown",
+            }
+          );
+        })
+        .filter(Boolean);
+    },
+    [availableSongs]
   );
+
+  const [songs, setSongs] = useState(() => resolveSongs(initialPlaylist));
   const [members, setMembers] = useState([]);
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(!initialPlaylist);
@@ -66,7 +88,7 @@ function PlaylistDetails({
   const [memberBusy, setMemberBusy] = useState(false);
 
   const loadMembers = useCallback(async () => {
-    if (!playlistId) return;
+    if (!playlistId || !isDatabaseId(playlistId) || !isAuthenticated()) return;
     try {
       const response = await getPlaylistMembers(playlistId);
       setMembers(toList(response.data));
@@ -82,16 +104,35 @@ function PlaylistDetails({
       if (!playlistId) {
         if (initialPlaylist) {
           setPlaylist(initialPlaylist);
-          setSongs(
-            Array.isArray(initialPlaylist.songs)
-              ? initialPlaylist.songs.map(unwrapSong)
-              : []
-          );
+          setSongs(resolveSongs(initialPlaylist));
           setLoading(false);
         } else {
           setError("Playlist not found.");
           setLoading(false);
         }
+        return;
+      }
+
+      // If this is a local client-side playlist (non-database ID)
+      if (!isDatabaseId(playlistId)) {
+        let found = initialPlaylist;
+        if (!found) {
+          try {
+            const localPlaylists = JSON.parse(
+              localStorage.getItem("vayam-playlists") || "[]"
+            );
+            found = localPlaylists.find((p) => sameId(p.id, playlistId));
+          } catch {
+            found = null;
+          }
+        }
+        if (found) {
+          setPlaylist(found);
+          setSongs(resolveSongs(found));
+        } else {
+          setError("Playlist not found.");
+        }
+        setLoading(false);
         return;
       }
 
@@ -115,7 +156,7 @@ function PlaylistDetails({
         if (songsRes?.data) {
           setSongs(toList(songsRes.data).map(unwrapSong));
         } else if (initialPlaylist?.songs) {
-          setSongs(initialPlaylist.songs.map(unwrapSong));
+          setSongs(resolveSongs(initialPlaylist));
         }
 
         setMe(meRes ? getUser(meRes) : null);
@@ -124,11 +165,7 @@ function PlaylistDetails({
         if (active) {
           if (initialPlaylist) {
             setPlaylist(initialPlaylist);
-            setSongs(
-              Array.isArray(initialPlaylist.songs)
-                ? initialPlaylist.songs.map(unwrapSong)
-                : []
-            );
+            setSongs(resolveSongs(initialPlaylist));
           } else {
             setError(getApiErrorMessage(requestError, "Could not load this playlist."));
           }
@@ -142,31 +179,62 @@ function PlaylistDetails({
     return () => {
       active = false;
     };
-  }, [playlistId, loadMembers]);
+  }, [playlistId, initialPlaylist, loadMembers, resolveSongs]);
 
-  // Search the catalogue while the "Add songs" panel is open.
+  // Search catalogue and availableSongs while the "Add songs" panel is open.
   useEffect(() => {
-    const query = addText.trim();
-    if (!showAdd || !query) return undefined;
+    if (!showAdd) return undefined;
+    const query = addText.trim().toLowerCase();
     let active = true;
 
+    if (!query) {
+      // Default: show first 25 candidate songs from availableSongs
+      setAddResults(availableSongs.slice(0, 25));
+      return undefined;
+    }
+
+    // Instant local filter on availableSongs
+    const localMatches = availableSongs.filter((song) => {
+      const title = (song?.title || "").toLowerCase();
+      const artist = (song?.artist || "").toLowerCase();
+      const genre = (song?.genre || "").toLowerCase();
+      return (
+        title.includes(query) ||
+        artist.includes(query) ||
+        genre.includes(query)
+      );
+    });
+    setAddResults(localMatches);
+
+    // If online search is available, query backend and merge
     const timer = setTimeout(async () => {
       setAddLoading(true);
       try {
-        const response = await searchSongs(query);
-        if (active) setAddResults(toList(response.data).map(unwrapSong));
+        const response = await searchSongs(addText.trim());
+        if (active) {
+          const serverSongs = toList(response?.data).map(unwrapSong);
+          const seen = new Set(localMatches.map((s) => String(s.id)));
+          const merged = [...localMatches];
+          for (const s of serverSongs) {
+            if (!seen.has(String(s.id))) {
+              seen.add(String(s.id));
+              merged.push(s);
+            }
+          }
+          setAddResults(merged);
+        }
       } catch {
-        if (active) setAddResults([]);
+        // Keep local matches if backend query fails
       } finally {
         if (active) setAddLoading(false);
       }
-    }, 350);
+    }, 300);
 
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [addText, showAdd]);
+  }, [addText, showAdd, availableSongs]);
 
   const ownerId = getOwnerId(playlist);
   // If the backend does not send an owner, show the controls and let it enforce permissions.
@@ -174,8 +242,8 @@ function PlaylistDetails({
   const isShared = members.length > 1;
 
   function startEditing() {
-    setDraftName(playlist.name || "");
-    setDraftDescription(playlist.description || "");
+    setDraftName(playlist?.name || "");
+    setDraftDescription(playlist?.description || "");
     setMessage("");
     setEditing(true);
   }
@@ -187,15 +255,33 @@ function PlaylistDetails({
     setSaving(true);
     setMessage("");
     try {
-      await updatePlaylist(playlistId, {
+      if (isDatabaseId(playlistId) && isAuthenticated()) {
+        await updatePlaylist(playlistId, {
+          name: draftName.trim(),
+          description: draftDescription.trim(),
+        });
+      }
+      const updatedPlaylist = {
+        ...(playlist || {}),
         name: draftName.trim(),
         description: draftDescription.trim(),
-      });
-      setPlaylist((current) => ({
-        ...current,
-        name: draftName.trim(),
-        description: draftDescription.trim(),
-      }));
+      };
+      setPlaylist(updatedPlaylist);
+
+      try {
+        const localPlaylists = JSON.parse(
+          localStorage.getItem("vayam-playlists") || "[]"
+        );
+        const updated = localPlaylists.map((p) =>
+          sameId(p.id, playlistId)
+            ? { ...p, name: draftName.trim(), description: draftDescription.trim() }
+            : p
+        );
+        localStorage.setItem("vayam-playlists", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update localStorage:", e);
+      }
+
       setEditing(false);
       onChanged?.();
     } catch (requestError) {
@@ -206,10 +292,23 @@ function PlaylistDetails({
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete "${playlist.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${playlist?.name || "this playlist"}"? This cannot be undone.`)) return;
 
     try {
-      await deletePlaylist(playlistId);
+      if (isDatabaseId(playlistId) && isAuthenticated()) {
+        await deletePlaylist(playlistId);
+      }
+
+      try {
+        const localPlaylists = JSON.parse(
+          localStorage.getItem("vayam-playlists") || "[]"
+        );
+        const updated = localPlaylists.filter((p) => !sameId(p.id, playlistId));
+        localStorage.setItem("vayam-playlists", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update localStorage:", e);
+      }
+
       onChanged?.();
       onDeleted?.();
     } catch (requestError) {
@@ -220,8 +319,41 @@ function PlaylistDetails({
   async function handleAddSong(song) {
     setMessage("");
     try {
-      await addSongToPlaylist(playlistId, song.id);
-      setSongs((current) => [...current, song]);
+      if (isDatabaseId(playlistId) && isAuthenticated()) {
+        await addSongToPlaylist(playlistId, song.id);
+      }
+
+      const unwrapped = unwrapSong(song);
+      setSongs((current) => {
+        if (current.some((item) => sameId(item.id, unwrapped.id))) return current;
+        return [...current, unwrapped];
+      });
+
+      setPlaylist((current) => {
+        if (!current) return current;
+        const curSongs = Array.isArray(current.songs) ? current.songs : [];
+        if (curSongs.some((item) => sameId(item?.id ?? item, unwrapped.id))) return current;
+        return { ...current, songs: [...curSongs, unwrapped] };
+      });
+
+      try {
+        const localPlaylists = JSON.parse(
+          localStorage.getItem("vayam-playlists") || "[]"
+        );
+        const updated = localPlaylists.map((p) => {
+          if (sameId(p.id, playlistId)) {
+            const pSongs = Array.isArray(p.songs) ? p.songs : [];
+            if (!pSongs.some((item) => sameId(item?.id ?? item, unwrapped.id))) {
+              return { ...p, songs: [...pSongs, unwrapped] };
+            }
+          }
+          return p;
+        });
+        localStorage.setItem("vayam-playlists", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update localStorage:", e);
+      }
+
       onChanged?.();
     } catch (requestError) {
       setMessage(getApiErrorMessage(requestError, "Could not add this song."));
@@ -231,8 +363,41 @@ function PlaylistDetails({
   async function handleRemoveSong(song) {
     setMessage("");
     try {
-      await removeSongFromPlaylist(playlistId, song.id);
-      setSongs((current) => current.filter((item) => !sameId(item.id, song.id)));
+      if (isDatabaseId(playlistId) && isAuthenticated()) {
+        await removeSongFromPlaylist(playlistId, song.id);
+      }
+
+      const unwrapped = unwrapSong(song);
+      setSongs((current) => current.filter((item) => !sameId(item.id, unwrapped.id)));
+
+      setPlaylist((current) => {
+        if (!current) return current;
+        const curSongs = Array.isArray(current.songs) ? current.songs : [];
+        return {
+          ...current,
+          songs: curSongs.filter((item) => !sameId(item?.id ?? item, unwrapped.id)),
+        };
+      });
+
+      try {
+        const localPlaylists = JSON.parse(
+          localStorage.getItem("vayam-playlists") || "[]"
+        );
+        const updated = localPlaylists.map((p) => {
+          if (sameId(p.id, playlistId)) {
+            const pSongs = Array.isArray(p.songs) ? p.songs : [];
+            return {
+              ...p,
+              songs: pSongs.filter((item) => !sameId(item?.id ?? item, unwrapped.id)),
+            };
+          }
+          return p;
+        });
+        localStorage.setItem("vayam-playlists", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update localStorage:", e);
+      }
+
       onChanged?.();
     } catch (requestError) {
       setMessage(getApiErrorMessage(requestError, "Could not remove this song."));
@@ -383,15 +548,17 @@ function PlaylistDetails({
 
           {addLoading && <p className="dashboard-subtitle">Searching...</p>}
 
-          {addText.trim() && !addLoading && (
+          {!addLoading && (
             <div className="dashboard-song-list">
               {addResults.length === 0 ? (
-                <p className="dashboard-subtitle">No songs found.</p>
+                <p className="dashboard-subtitle">
+                  {addText.trim() ? "No songs found." : "No songs available to add."}
+                </p>
               ) : (
                 addResults.map((song) => {
                   const added = songs.some((item) => sameId(item.id, song.id));
                   return (
-                    <SongRow key={song.id} song={song}>
+                    <SongRow key={song.id} song={song} onOpen={onOpenSong ? () => onOpenSong(song, addResults) : undefined}>
                       <button
                         type="button"
                         className={`dashboard-add-button ${added ? "selected" : ""}`}
@@ -423,9 +590,9 @@ function PlaylistDetails({
                 <SongRow
                   key={song.id}
                   song={song}
-                  liked={isLiked?.(song.id)}
-                  onToggleLike={onToggleLike}
-                  onOpen={onOpenSong}
+                  liked={isLiked?.(song)}
+                  onToggleLike={() => onToggleLike?.(song)}
+                  onOpen={onOpenSong ? () => onOpenSong(song, songs) : undefined}
                 >
                   <button
                     type="button"

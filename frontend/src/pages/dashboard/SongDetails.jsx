@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getApiErrorMessage } from "../../api/api";
+import { getApiErrorMessage, isAuthenticated } from "../../api/api";
 import {
   addSongToPlaylist,
   getSongById,
@@ -11,6 +11,7 @@ import {
   getArtClass,
   getAudio,
   getCover,
+  sameId,
   toList,
   unwrapSong,
 } from "../../utils/music";
@@ -76,11 +77,42 @@ function SongDetails({
     setAddMessage("");
 
     try {
-      await addSongToPlaylist(playlistId, songId);
+      const isDatabaseId =
+        (typeof playlistId === "number" ||
+          (!isNaN(playlistId) && !String(playlistId).includes("-"))) &&
+        String(playlistId).trim() !== "";
+
+      if (isDatabaseId && isAuthenticated()) {
+        await addSongToPlaylist(playlistId, songId);
+      }
+
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem("vayam-playlists") || "[]"
+        );
+        const updated = stored.map((p) => {
+          if (sameId(p.id, playlistId)) {
+            const pSongs = Array.isArray(p.songs) ? p.songs : [];
+            if (!pSongs.some((item) => sameId(item?.id ?? item, song.id))) {
+              return { ...p, songs: [...pSongs, song] };
+            }
+          }
+          return p;
+        });
+        localStorage.setItem("vayam-playlists", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update localStorage:", e);
+      }
+
       setAddMessage("Added to your playlist ✓");
       onPlaylistChanged?.();
     } catch (requestError) {
-      setAddMessage(getApiErrorMessage(requestError, "Could not add this song to the playlist."));
+      setAddMessage(
+        getApiErrorMessage(
+          requestError,
+          "Could not add this song to the playlist."
+        )
+      );
     } finally {
       setAdding(false);
     }

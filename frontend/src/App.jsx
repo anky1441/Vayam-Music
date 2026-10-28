@@ -1,4 +1,5 @@
 import { PlayerProvider } from "./context/PlayerContext";
+import { LibraryProvider } from "./context/LibraryContext";
 import Player from "./components/Player";
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
@@ -18,9 +19,6 @@ import Register from "./pages/Register";
 import About from "./pages/About";
 import CollabPlaylists from "./pages/CollabPlaylists";
 
-
-
-
 function LandingPage() {
   return (
     <>
@@ -39,18 +37,19 @@ function LandingPage() {
 function App() {
   return (
     <PlayerProvider>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/collab" element={<CollabPlaylists />} />
-      </Routes>
-      <Player />
+      <LibraryProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/collab" element={<CollabPlaylists />} />
+        </Routes>
+        <Player />
+      </LibraryProvider>
     </PlayerProvider>
   );
 }
-
 
 export default App;

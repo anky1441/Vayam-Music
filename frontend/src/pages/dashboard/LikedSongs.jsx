@@ -1,5 +1,5 @@
 import SongRow from "../../components/SongRow";
-import { getSongId, sameId, unwrapSong } from "../../utils/music";
+import { getSongId, sameId } from "../../utils/music";
 import "./DashboardContent.css";
 
 // `likedItems` or `likedSongs` comes from parent. If the backend only returns
@@ -45,11 +45,11 @@ function LikedSongs({ likedItems, likedSongs, songs = [], onToggleLike, onOpenSo
         <div className="dashboard-song-list">
           {liked.map((song) => (
             <SongRow
-              key={song.id || song._id || song.title}
+              key={song.id || song._id || `${song.title}-${song.artist}`}
               song={song}
               liked
-              onToggleLike={() => onToggleLike?.(song.id || song._id)}
-              onOpen={handlePlay ? () => handlePlay(song) : undefined}
+              onToggleLike={() => onToggleLike?.(song)}
+              onOpen={handlePlay ? () => handlePlay(song, liked) : undefined}
             />
           ))}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { usePlayer } from "../../context/PlayerContext";
 import { matchStorySong } from "../../api/musicApi";
 import "./StorySong.css";
@@ -125,9 +125,9 @@ export default function StorySong({ onPlaySong }) {
     };
 
     if (onPlaySong) {
-      onPlaySong(songPayload);
+      onPlaySong(songPayload, (recommendations || []).map((t) => ({ id: t.track_name + "_" + t.artists, title: t.track_name, artist: t.artists, genre: t.track_genre })));
     } else {
-      playSong(songPayload);
+      playSong(songPayload, (recommendations || []).map((t) => ({ id: t.track_name + "_" + t.artists, title: t.track_name, artist: t.artists, genre: t.track_genre })));
     }
   };
 
