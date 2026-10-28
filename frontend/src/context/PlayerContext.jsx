@@ -68,6 +68,23 @@ export function PlayerProvider({ children }) {
     useEffect(() => {
         if (typeof window === "undefined") return;
 
+        // Ensure host element exists in document.body directly (outside React virtual DOM)
+        let bridge = document.getElementById("vayam-yt-bridge");
+        if (!bridge) {
+            bridge = document.createElement("div");
+            bridge.id = "vayam-yt-bridge";
+            bridge.setAttribute("aria-hidden", "true");
+            bridge.style.position = "fixed";
+            bridge.style.bottom = "-9999px";
+            bridge.style.left = "-9999px";
+            bridge.style.width = "1px";
+            bridge.style.height = "1px";
+            bridge.style.opacity = "0";
+            bridge.style.pointerEvents = "none";
+            bridge.style.zIndex = "-100";
+            document.body.appendChild(bridge);
+        }
+
         const initYT = () => {
             if (ytPlayerRef.current || !window.YT || !window.YT.Player) return;
             const container = document.getElementById("vayam-yt-bridge");
@@ -227,6 +244,11 @@ export function PlayerProvider({ children }) {
         const player = ytPlayerRef.current;
         if (!player || !ytReadyRef.current || typeof player.loadVideoById !== "function") {
             pendingSongRef.current = { videoId, query };
+            setTimeout(() => {
+                if (pendingSongRef.current) {
+                    setIsLoadingAudio(false);
+                }
+            }, 3000);
             return;
         }
 
@@ -560,21 +582,6 @@ export function PlayerProvider({ children }) {
             }}
         >
             {children}
-            {/* Resilient hidden YouTube player bridge for uninterrupted full music playback */}
-            <div
-                id="vayam-yt-bridge"
-                aria-hidden="true"
-                style={{
-                    position: "fixed",
-                    bottom: -9999,
-                    left: -9999,
-                    width: 1,
-                    height: 1,
-                    opacity: 0,
-                    pointerEvents: "none",
-                    zIndex: -100,
-                }}
-            />
         </PlayerContext.Provider>
     );
 }
