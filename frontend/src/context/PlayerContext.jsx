@@ -36,6 +36,11 @@ const PlayerContext = createContext(defaultPlayerContext);
 
 export function PlayerProvider({ children }) {
     const audioRef = useRef(new Audio());
+    const ytPlayerRef = useRef(null);
+    const ytReadyRef = useRef(false);
+    const activePlayerRef = useRef("none"); // "audio" | "youtube" | "none"
+    const pendingSongRef = useRef(null);
+
     const [currentSong, setCurrentSong] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -59,23 +64,131 @@ export function PlayerProvider({ children }) {
         queueIndexRef.current = queueIndex;
     }, [queueIndex]);
 
-    // Configure audio listeners
+    // Initialize YouTube IFrame API bridge on mount
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const initYT = () => {
+            if (ytPlayerRef.current || !window.YT || !window.YT.Player) return;
+            const container = document.getElementById("vayam-yt-bridge");
+            if (!container) return;
+
+            try {
+                ytPlayerRef.current = new window.YT.Player("vayam-yt-bridge", {
+                    height: "1",
+                    width: "1",
+                    playerVars: {
+                        autoplay: 1,
+                        controls: 0,
+                        disablekb: 1,
+                        fs: 0,
+                        rel: 0,
+                        playsinline: 1,
+                    },
+                    events: {
+                        onReady: () => {
+                            ytReadyRef.current = true;
+                            if (pendingSongRef.current) {
+                                const { videoId, query } = pendingSongRef.current;
+                                pendingSongRef.current = null;
+                                playInYouTube(videoId, query);
+                            }
+                        },
+                        onStateChange: (event) => {
+                            if (activePlayerRef.current !== "youtube") return;
+                            if (event.data === window.YT.PlayerState.PLAYING) {
+                                setIsPlaying(true);
+                                setIsLoadingAudio(false);
+                            } else if (event.data === window.YT.PlayerState.PAUSED) {
+                                setIsPlaying(false);
+                            } else if (event.data === window.YT.PlayerState.ENDED) {
+                                setIsPlaying(false);
+                                if (playNextRef.current) {
+                                    playNextRef.current();
+                                }
+                            } else if (event.data === window.YT.PlayerState.BUFFERING) {
+                                setIsLoadingAudio(true);
+                            }
+                        },
+                        onError: (e) => {
+                            console.warn("YouTube player bridge notice:", e.data);
+                            setIsLoadingAudio(false);
+                        },
+                    },
+                });
+            } catch (err) {
+                console.warn("YouTube bridge creation deferred:", err);
+            }
+        };
+
+        if (!window.YT) {
+            const existingScript = document.getElementById("vayam-yt-script");
+            if (!existingScript) {
+                const tag = document.createElement("script");
+                tag.id = "vayam-yt-script";
+                tag.src = "https://www.youtube.com/iframe_api";
+                document.head.appendChild(tag);
+            }
+            const prevCallback = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                if (typeof prevCallback === "function") prevCallback();
+                initYT();
+            };
+        } else if (window.YT && window.YT.Player) {
+            initYT();
+        }
+    }, []);
+
+    // Ticker to sync current time and duration when active player is YouTube
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (activePlayerRef.current === "youtube" && ytPlayerRef.current) {
+                try {
+                    const p = ytPlayerRef.current;
+                    if (typeof p.getCurrentTime === "function") {
+                        const ct = p.getCurrentTime() || 0;
+                        const dur = p.getDuration() || 0;
+                        setCurrentTime(ct);
+                        if (dur > 0) setDuration(dur);
+                    }
+                } catch {}
+            }
+        }, 400);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Configure native HTML5 Audio listeners
     useEffect(() => {
         const audio = audioRef.current;
         audio.volume = volume;
 
-        const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-        const handleLoadedMetadata = () => setDuration(audio.duration || 0);
-        const handleWaiting = () => setIsLoadingAudio(true);
+        const handleTimeUpdate = () => {
+            if (activePlayerRef.current === "audio") {
+                setCurrentTime(audio.currentTime);
+            }
+        };
+        const handleLoadedMetadata = () => {
+            if (activePlayerRef.current === "audio") {
+                setDuration(audio.duration || 0);
+            }
+        };
+        const handleWaiting = () => {
+            if (activePlayerRef.current === "audio") {
+                setIsLoadingAudio(true);
+            }
+        };
         const handlePlaying = () => {
-            setIsLoadingAudio(false);
-            setIsPlaying(true);
+            if (activePlayerRef.current === "audio") {
+                setIsLoadingAudio(false);
+                setIsPlaying(true);
+            }
         };
         const handleEnded = () => {
-            setIsPlaying(false);
-            // Automatically advance to the next track if a queue exists
-            if (playNextRef.current) {
-                playNextRef.current();
+            if (activePlayerRef.current === "audio") {
+                setIsPlaying(false);
+                if (playNextRef.current) {
+                    playNextRef.current();
+                }
             }
         };
 
@@ -94,11 +207,60 @@ export function PlayerProvider({ children }) {
         };
     }, [volume]);
 
-    // Play a specific song and optionally update the active queue
+    // Helper: Stop playback on both engines
+    const stopAllMedia = () => {
+        const audio = audioRef.current;
+        try {
+            audio.pause();
+            audio.currentTime = 0;
+        } catch {}
+
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === "function") {
+            try {
+                ytPlayerRef.current.pauseVideo();
+            } catch {}
+        }
+    };
+
+    // Helper: Play directly in YouTube bridge
+    const playInYouTube = (videoId, query) => {
+        const player = ytPlayerRef.current;
+        if (!player || !ytReadyRef.current || typeof player.loadVideoById !== "function") {
+            pendingSongRef.current = { videoId, query };
+            return;
+        }
+
+        try {
+            if (videoId) {
+                player.loadVideoById(videoId);
+            } else {
+                player.loadPlaylist({
+                    listType: "search",
+                    list: query || "music audio",
+                    index: 0,
+                    startSeconds: 0,
+                });
+            }
+            player.playVideo();
+            activePlayerRef.current = "youtube";
+            setIsPlaying(true);
+            setIsLoadingAudio(false);
+        } catch (err) {
+            console.warn("YouTube play invocation fallback:", err);
+            activePlayerRef.current = "youtube";
+            setIsPlaying(true);
+            setIsLoadingAudio(false);
+        }
+    };
+
+    // Play a specific song and optionally update active queue
     const playSong = async (song, newQueue = null) => {
         if (!song) return;
         const unwrapped = unwrapSong(song);
         const audio = audioRef.current;
+
+        // Stop whatever is playing right now
+        stopAllMedia();
 
         // Handle Queue logic
         let currentQ = queueRef.current;
@@ -116,7 +278,6 @@ export function PlayerProvider({ children }) {
             );
             if (targetIdx === -1) targetIdx = 0;
         } else {
-            // Check if unwrapped song already exists in current queue
             targetIdx = currentQ.findIndex(
                 (s) =>
                     sameId(s.id, unwrapped.id) ||
@@ -134,107 +295,117 @@ export function PlayerProvider({ children }) {
         queueIndexRef.current = targetIdx;
         setCurrentSong(unwrapped);
         setIsLoadingAudio(true);
+        setCurrentTime(0);
 
-        try {
-            let streamUrl = null;
-
-            // 1. If song already has a direct valid audio stream that is NOT a placeholder or 30s preview, use it!
-            if (unwrapped.audioUrl && !isAudioPreviewOrPlaceholder(unwrapped.audioUrl)) {
-                streamUrl = unwrapped.audioUrl;
-            }
-
-            // 2. Fetch live full stream URL from YouTube streaming engine (Google CDN m4a)
-            if (!streamUrl) {
-                const candidateEndpoints = [
-                    ML_BASE_URL,
-                    "https://vayam-music-ml-api.onrender.com",
-                    "http://localhost:8000"
-                ].filter(Boolean);
-                const uniqueEndpoints = [...new Set(candidateEndpoints)];
-
-                for (const endpoint of uniqueEndpoints) {
-                    if (streamUrl) break;
-                    const isMixed =
-                        typeof window !== "undefined" &&
-                        window.location.protocol === "https:" &&
-                        endpoint.startsWith("http://");
-                    if (isMixed) continue;
-
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 20000);
-                        const response = await fetch(
-                            `${endpoint}/audio/stream?title=${encodeURIComponent(
-                                unwrapped.title
-                            )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
-                            { signal: controller.signal }
-                        );
-                        clearTimeout(timeoutId);
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.stream_url) {
-                                streamUrl = data.stream_url;
-                            }
-                            if (data.thumbnail && !unwrapped.coverUrl) {
-                                setCurrentSong((prev) =>
-                                    prev ? { ...prev, coverUrl: data.thumbnail } : prev
-                                );
-                            }
-                            break;
-                        }
-                    } catch (backendErr) {
-                        console.warn(`YouTube stream fetch error from ${endpoint}:`, backendErr);
-                    }
-                }
-            }
-
-            // 3. Fallback for HD cover art ONLY (NEVER use Apple preview audio for playback!)
-            if (!unwrapped.coverUrl) {
-                try {
-                    const queryTerm = encodeURIComponent(
-                        `${unwrapped.title} ${unwrapped.artist || ""}`.trim()
-                    );
-                    const catRes = await fetch(
-                        `https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`
-                    );
-                    if (catRes.ok) {
-                        const catData = await catRes.json();
+        // Resolve cover art in background if missing
+        if (!unwrapped.coverUrl) {
+            try {
+                const queryTerm = encodeURIComponent(
+                    `${unwrapped.title} ${unwrapped.artist || ""}`.trim()
+                );
+                fetch(`https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`)
+                    .then((r) => r.json())
+                    .then((catData) => {
                         const hit = catData.results?.[0];
                         if (hit?.artworkUrl100) {
                             const cover = hit.artworkUrl100.replace("100x100bb", "600x600bb");
-                            setCurrentSong((prev) =>
-                                prev ? { ...prev, coverUrl: cover } : prev
-                            );
+                            setCurrentSong((prev) => (prev ? { ...prev, coverUrl: cover } : prev));
                         }
-                    }
-                } catch (catErr) {
-                    console.warn("Catalog cover art fallback error:", catErr);
-                }
-            }
-
-            if (!streamUrl) {
-                throw new Error(`Unable to resolve YouTube audio stream for "${unwrapped.title}". Please ensure the audio streaming service is active.`);
-            }
-
-            audio.src = streamUrl;
-            audio.load();
-            try {
-                await audio.play();
-                setIsPlaying(true);
-            } catch (playErr) {
-                console.warn("Direct play error:", playErr);
-                setIsPlaying(!audio.paused);
-            }
-        } catch (err) {
-            console.error("Playback error:", err);
-            setIsPlaying(false);
-        } finally {
-            setIsLoadingAudio(false);
+                    })
+                    .catch(() => {});
+            } catch {}
         }
+
+        const ytSearchQuery = `${unwrapped.title} ${unwrapped.artist || ""} audio`.trim();
+
+        // 1. If song has a direct valid audio stream that is NOT a placeholder sound effect, try it!
+        if (unwrapped.audioUrl && !isAudioPreviewOrPlaceholder(unwrapped.audioUrl)) {
+            try {
+                audio.src = unwrapped.audioUrl;
+                audio.load();
+                await audio.play();
+                activePlayerRef.current = "audio";
+                setIsPlaying(true);
+                setIsLoadingAudio(false);
+                return;
+            } catch {
+                // If direct stream fails, fall through to YouTube streaming engine
+            }
+        }
+
+        // 2. Fetch live YouTube audio stream from ML engine or fallback to YouTube bridge
+        let resolvedStreamUrl = null;
+        let resolvedVideoId = unwrapped.videoId || unwrapped.video_id || null;
+
+        const candidateEndpoints = [
+            ML_BASE_URL,
+            "https://vayam-music-ml-api.onrender.com",
+            "http://localhost:8000",
+        ].filter(Boolean);
+        const uniqueEndpoints = [...new Set(candidateEndpoints)];
+
+        for (const endpoint of uniqueEndpoints) {
+            if (resolvedStreamUrl) break;
+            const isMixed =
+                typeof window !== "undefined" &&
+                window.location.protocol === "https:" &&
+                endpoint.startsWith("http://");
+            if (isMixed) continue;
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 7000);
+                const response = await fetch(
+                    `${endpoint}/audio/stream?title=${encodeURIComponent(
+                        unwrapped.title
+                    )}&artist=${encodeURIComponent(unwrapped.artist || "")}`,
+                    { signal: controller.signal }
+                );
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.stream_url) {
+                        resolvedStreamUrl = data.stream_url;
+                    }
+                    if (data.video_id) {
+                        resolvedVideoId = data.video_id;
+                    }
+                    if (data.thumbnail && !unwrapped.coverUrl) {
+                        setCurrentSong((prev) =>
+                            prev ? { ...prev, coverUrl: data.thumbnail } : prev
+                        );
+                    }
+                    if (data.duration) {
+                        setDuration(data.duration);
+                    }
+                    break;
+                }
+            } catch {
+                // Connection or timeout - continue
+            }
+        }
+
+        // 3. Play the resolved stream or fall back to resilient YouTube bridge
+        if (resolvedStreamUrl) {
+            try {
+                audio.src = resolvedStreamUrl;
+                audio.load();
+                await audio.play();
+                activePlayerRef.current = "audio";
+                setIsPlaying(true);
+                setIsLoadingAudio(false);
+                return;
+            } catch (audioErr) {
+                console.warn("Direct HTML5 audio play error, switching to YouTube bridge:", audioErr);
+            }
+        }
+
+        // 4. Resilient YouTube Player Bridge (Plays full audio everywhere without 403 or CORS)
+        playInYouTube(resolvedVideoId, ytSearchQuery);
     };
 
-    // Play next song in the active queue (with AI auto-recommendation when reaching the end)
+    // Play next song in active queue (with AI auto-recommendations when reaching the end)
     const playNext = useCallback(async () => {
         const curQ = queueRef.current;
         const curIdx = queueIndexRef.current;
@@ -249,7 +420,7 @@ export function PlayerProvider({ children }) {
             return;
         }
 
-        // 2. Reached the end of queue (or single song): automatically query ML recommendation engine
+        // 2. Reached the end of queue: automatically query ML recommendation engine
         const currentSongObj = curQ[curIdx];
         if (currentSongObj?.title) {
             try {
@@ -288,15 +459,11 @@ export function PlayerProvider({ children }) {
 
     // Reverse / Previous playback
     const playPrevious = useCallback(() => {
-        const audio = audioRef.current;
-
         // Standard Reverse Behavior: If played > 3 seconds, replay from start (0:00)
-        if (audio && audio.currentTime > 3) {
-            audio.currentTime = 0;
-            setCurrentTime(0);
-            if (audio.paused) {
-                audio.play().catch(console.error);
-                setIsPlaying(true);
+        if (currentTime > 3) {
+            seek(0);
+            if (!isPlaying) {
+                togglePlay();
             }
             return;
         }
@@ -311,7 +478,7 @@ export function PlayerProvider({ children }) {
         if (prevSong) {
             playSong(prevSong);
         }
-    }, []);
+    }, [currentTime, isPlaying]);
 
     // Keep playNextRef up to date for handleEnded listener
     useEffect(() => {
@@ -319,9 +486,22 @@ export function PlayerProvider({ children }) {
     }, [playNext]);
 
     const togglePlay = () => {
-        const audio = audioRef.current;
         if (!currentSong) return;
 
+        if (activePlayerRef.current === "youtube" && ytPlayerRef.current) {
+            try {
+                if (isPlaying) {
+                    ytPlayerRef.current.pauseVideo();
+                    setIsPlaying(false);
+                } else {
+                    ytPlayerRef.current.playVideo();
+                    setIsPlaying(true);
+                }
+                return;
+            } catch {}
+        }
+
+        const audio = audioRef.current;
         if (isPlaying) {
             audio.pause();
             setIsPlaying(false);
@@ -332,6 +512,14 @@ export function PlayerProvider({ children }) {
     };
 
     const seek = (timeInSeconds) => {
+        if (activePlayerRef.current === "youtube" && ytPlayerRef.current) {
+            try {
+                ytPlayerRef.current.seekTo(timeInSeconds, true);
+                setCurrentTime(timeInSeconds);
+                return;
+            } catch {}
+        }
+
         const audio = audioRef.current;
         audio.currentTime = timeInSeconds;
         setCurrentTime(timeInSeconds);
@@ -340,6 +528,13 @@ export function PlayerProvider({ children }) {
     const changeVolume = (newVolume) => {
         const audio = audioRef.current;
         audio.volume = newVolume;
+
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === "function") {
+            try {
+                ytPlayerRef.current.setVolume(newVolume * 100);
+            } catch {}
+        }
+
         setVolume(newVolume);
     };
 
@@ -365,6 +560,21 @@ export function PlayerProvider({ children }) {
             }}
         >
             {children}
+            {/* Resilient hidden YouTube player bridge for uninterrupted full music playback */}
+            <div
+                id="vayam-yt-bridge"
+                aria-hidden="true"
+                style={{
+                    position: "fixed",
+                    bottom: -9999,
+                    left: -9999,
+                    width: 1,
+                    height: 1,
+                    opacity: 0,
+                    pointerEvents: "none",
+                    zIndex: -100,
+                }}
+            />
         </PlayerContext.Provider>
     );
 }
