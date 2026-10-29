@@ -4,12 +4,42 @@ import { matchStorySong } from "../../api/musicApi";
 import "./StorySong.css";
 
 const PRESET_VIBES = [
-  "🌙 Midnight highway drive with neon city lights",
-  "☕ Rainy Sunday morning in a warm cozy cafe",
-  "🌅 Golden hour sunset on a peaceful ocean cliff",
-  "⚡ High-energy focus gym session with synth rhythm",
-  "🍃 Peaceful walk in a foggy pine forest",
-  "✨ Nostalgic summer memories with friends",
+  {
+    id: "midnight",
+    label: "🌙 Midnight highway drive with neon city lights",
+    text: "Midnight highway drive with neon city lights",
+    image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800",
+  },
+  {
+    id: "rainy",
+    label: "☕ Rainy Sunday morning in a warm cozy cafe",
+    text: "Rainy Sunday morning in a warm cozy cafe",
+    image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800",
+  },
+  {
+    id: "sunset",
+    label: "🌅 Golden hour sunset on a peaceful ocean cliff",
+    text: "Golden hour sunset on a peaceful ocean cliff",
+    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
+  },
+  {
+    id: "gym",
+    label: "⚡ High-energy focus gym session with synth rhythm",
+    text: "High-energy focus gym session with synth rhythm",
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+  },
+  {
+    id: "forest",
+    label: "🍃 Peaceful walk in a foggy pine forest",
+    text: "Peaceful walk in a foggy pine forest",
+    image: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800",
+  },
+  {
+    id: "nostalgic",
+    label: "✨ Nostalgic summer memories with friends",
+    text: "Nostalgic summer memories with friends",
+    image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800",
+  },
 ];
 
 export default function StorySong({ onPlaySong }) {
@@ -18,6 +48,7 @@ export default function StorySong({ onPlaySong }) {
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [selectedPreset, setSelectedPreset] = useState(null);
   const [vibeText, setVibeText] = useState("");
   const [trackCount, setTrackCount] = useState(6);
 
@@ -36,6 +67,7 @@ export default function StorySong({ onPlaySong }) {
       return;
     }
     setError("");
+    setSelectedPreset(null);
     setImageFile(file);
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
@@ -55,8 +87,11 @@ export default function StorySong({ onPlaySong }) {
   const handleRemoveImage = (e) => {
     e.stopPropagation();
     setImageFile(null);
+    setSelectedPreset(null);
     if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
+      if (imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
       setImagePreview(null);
     }
     if (fileInputRef.current) {
@@ -64,11 +99,19 @@ export default function StorySong({ onPlaySong }) {
     }
   };
 
+  // Select one of the curated aesthetic vibe presets
+  const handleSelectPreset = (preset) => {
+    setSelectedPreset(preset.id);
+    setVibeText(preset.text);
+    setImagePreview(preset.image);
+    setError("");
+  };
+
   // Submit to ML StorySong API
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!imageFile) {
-      setError("Please select or drop an image to analyze.");
+    if (e?.preventDefault) e.preventDefault();
+    if (!imageFile && !imagePreview && !vibeText.trim()) {
+      setError("Please select a preset vibe or upload an image to analyze.");
       return;
     }
 
@@ -78,18 +121,20 @@ export default function StorySong({ onPlaySong }) {
     setRecommendations([]);
 
     // Multi-stage status feedback
-    setStatusText("Analyzing image aesthetics & visual vibes with Vision AI...");
+    setStatusText("Analyzing visual aesthetics & emotional vibe...");
     const timer1 = setTimeout(() => {
-      setStatusText("Extracting emotional valence and energy levels...");
-    }, 1400);
+      setStatusText("Synthesizing musical valence & energy coordinates...");
+    }, 1200);
 
     const timer2 = setTimeout(() => {
       setStatusText("Scanning Spotify 114k catalog for the perfect musical matches...");
-    }, 2800);
+    }, 2400);
 
     try {
       const formData = new FormData();
-      formData.append("file", imageFile);
+      if (imageFile) {
+        formData.append("file", imageFile);
+      }
       formData.append("vibe", vibeText);
       formData.append("number", trackCount);
 
@@ -105,7 +150,7 @@ export default function StorySong({ onPlaySong }) {
       console.error("StorySong error:", err);
       setError(
         err.message ||
-          "Unable to analyze image or connect to ML backend. Please ensure the ML service is running."
+          "Unable to analyze atmosphere or connect to ML backend. Please ensure the ML service is running."
       );
     } finally {
       clearTimeout(timer1);
@@ -151,13 +196,15 @@ export default function StorySong({ onPlaySong }) {
     }
   };
 
+  const canSubmit = Boolean(imageFile || imagePreview || vibeText.trim());
+
   return (
     <div className="storysong-view">
       <div className="storysong-header">
         <span className="storysong-badge">✨ Feature 4 · Vision AI</span>
         <h1>AI StorySong Studio</h1>
         <p>
-          Upload any photo and describe your moment. Our Cloudflare Vision AI
+          Upload any photo or pick a curated aesthetic vibe below. Our Vision AI
           reads the emotion, calculates valence and energy coordinates, and
           curates an instant personalized soundtrack from over 114,000 tracks.
         </p>
@@ -210,18 +257,21 @@ export default function StorySong({ onPlaySong }) {
               className="storysong-textarea"
               placeholder="e.g. Late night thoughts, driving with the windows down..."
               value={vibeText}
-              onChange={(e) => setVibeText(e.target.value)}
+              onChange={(e) => {
+                setVibeText(e.target.value);
+                setSelectedPreset(null);
+              }}
             />
 
             <div className="storysong-presets">
-              {PRESET_VIBES.map((preset, idx) => (
+              {PRESET_VIBES.map((preset) => (
                 <button
-                  key={idx}
+                  key={preset.id}
                   type="button"
-                  className="storysong-chip"
-                  onClick={() => setVibeText(preset)}
+                  className={`storysong-chip ${selectedPreset === preset.id ? "active" : ""}`}
+                  onClick={() => handleSelectPreset(preset)}
                 >
-                  {preset}
+                  {preset.label}
                 </button>
               ))}
             </div>
@@ -244,7 +294,7 @@ export default function StorySong({ onPlaySong }) {
             <button
               type="button"
               className="storysong-submit-btn"
-              disabled={loading || !imageFile}
+              disabled={loading || !canSubmit}
               onClick={handleSubmit}
             >
               {loading ? (
@@ -338,9 +388,8 @@ export default function StorySong({ onPlaySong }) {
               <span>🔮</span> Emotional Coordinates
             </h2>
             <p style={{ color: "#b9adc9", fontSize: 13, margin: 0 }}>
-              Upload a picture and click <strong>Generate Soundtrack</strong> to
-              extract the emotional DNA (Valence & Energy) and explore matching
-              soundtracks.
+              Upload a picture or select any of the curated vibe presets above and click <strong>Generate Soundtrack</strong> to
+              extract the emotional coordinates and explore matching songs.
             </p>
           </div>
         )}

@@ -102,45 +102,40 @@ def recommend_similar(song_name, number=5):
     return recommendations
 
 
+MOOD_TARGETS = {
+    "happy":     {"valence": 0.80, "energy": 0.75, "danceability": 0.75},
+    "sad":       {"valence": 0.20, "energy": 0.35, "danceability": 0.40},
+    "relaxed":   {"valence": 0.55, "energy": 0.25, "danceability": 0.45},
+    "chill":     {"valence": 0.55, "energy": 0.25, "danceability": 0.45},
+    "energetic": {"valence": 0.65, "energy": 0.90, "danceability": 0.70},
+    "focus":     {"valence": 0.50, "energy": 0.35, "danceability": 0.40},
+    "romantic":  {"valence": 0.65, "energy": 0.45, "danceability": 0.55},
+}
+
+MOOD_ALIASES = {
+    "calm": "relaxed",
+    "peaceful": "relaxed",
+    "love": "romantic",
+    "workout": "energetic",
+    "gym": "energetic",
+    "study": "focus",
+    "work": "focus",
+}
+
+def resolve_mood(mood: str):
+    m = (mood or "").lower().strip()
+    return MOOD_ALIASES.get(m, m)
+
+
 def recommend_by_mood(mood, number=10):
     """Recommend songs based on the selected mood."""
-
-    mood_targets = {
-        "happy": {
-            "valence": 0.80,
-            "energy": 0.75,
-            "danceability": 0.75
-        },
-        "sad": {
-            "valence": 0.20,
-            "energy": 0.35,
-            "danceability": 0.40
-        },
-        "relaxed": {
-            "valence": 0.55,
-            "energy": 0.25,
-            "danceability": 0.45
-        },
-        "energetic": {
-            "valence": 0.65,
-            "energy": 0.90,
-            "danceability": 0.70
-        },
-        "focus": {
-            "valence": 0.50,
-            "energy": 0.35,
-            "danceability": 0.40
-        }
-    }
-
-    mood = mood.lower().strip()
-
-    if mood not in mood_targets:
+    resolved = resolve_mood(mood)
+    if resolved not in MOOD_TARGETS:
         return {
-            "error": "Choose happy, sad, relaxed, energetic, or focus"
+            "error": f"Invalid mood '{mood}'. Choose happy, sad, relaxed, chill, energetic, focus, or romantic."
         }
 
-    targets = mood_targets[mood]
+    targets = MOOD_TARGETS[resolved]
     scores = 0
 
     for feature, target in targets.items():
@@ -159,19 +154,9 @@ def recommend_by_mood(mood, number=10):
 
 def generate_playlist(mood, number=15, genre=None):
     """Generate a mood-based playlist with duplicate removal and artist variety."""
-
-    mood_targets = {
-        "happy":     {"valence": 0.80, "energy": 0.75, "danceability": 0.75},
-        "sad":       {"valence": 0.20, "energy": 0.35, "danceability": 0.40},
-        "relaxed":   {"valence": 0.55, "energy": 0.25, "danceability": 0.45},
-        "energetic": {"valence": 0.65, "energy": 0.90, "danceability": 0.70},
-        "focus":     {"valence": 0.50, "energy": 0.35, "danceability": 0.40}
-    }
-
-    mood = mood.lower().strip()
-
-    if mood not in mood_targets:
-        return {"error": "Choose happy, sad, relaxed, energetic, or focus"}
+    resolved = resolve_mood(mood)
+    if resolved not in MOOD_TARGETS:
+        return {"error": f"Invalid mood '{mood}'. Choose happy, sad, relaxed, chill, energetic, focus, or romantic."}
 
     if not isinstance(number, int) or isinstance(number, bool) or number < 1:
         return {"error": "Playlist size must be a positive integer"}
@@ -196,7 +181,7 @@ def generate_playlist(mood, number=15, genre=None):
         subset=["track_name"], keep="first"
     ).copy()
 
-    targets = mood_targets[mood]
+    targets = MOOD_TARGETS[resolved]
     scores = 0
 
     for feature, target in targets.items():

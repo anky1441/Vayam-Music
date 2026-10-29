@@ -219,6 +219,14 @@
   border-color: #c4a1ff;
 }
 
+.storysong-chip.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.45), rgba(99, 102, 241, 0.45));
+  border-color: #c4a1ff;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(196, 161, 255, 0.35);
+  font-weight: 600;
+}
+
 /* Controls Row */
 .storysong-controls-row {
   display: flex;

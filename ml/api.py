@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import concurrent.futures
@@ -196,6 +197,54 @@ def stream_audio(title: str, artist: str = ""):
     return res
 
 
+@app.get("/audio/prefetch")
+def prefetch_audio(title: str, artist: str = ""):
+    clean_title = (title or "").strip()
+    clean_artist = (artist or "").strip()
+    if not clean_title:
+        return {"status": "skipped"}
+    import threading
+    print(f"[PREFETCH QUEUE] Background resolving next queue song: '{clean_title}' by '{clean_artist}'", flush=True)
+    threading.Thread(target=get_audio_stream, args=(clean_title, clean_artist), daemon=True).start()
+    return {"status": "prefetching", "title": clean_title}
+
+
+
+@app.get("/audio/proxy")
+def proxy_audio_stream(title: str, artist: str = ""):
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="Song title is required")
+    stream_data = get_audio_stream(title.strip(), artist.strip())
+    if "error" in stream_data or not stream_data.get("stream_url"):
+        raise HTTPException(status_code=404, detail="Audio stream not found")
+    
+    stream_url = stream_data["stream_url"]
+
+    def iter_stream():
+        req = urllib.request.Request(
+            stream_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            }
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            while True:
+                chunk = resp.read(64 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+
+    return StreamingResponse(
+        iter_stream(),
+        media_type="audio/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=18000",
+        }
+    )
+
+
+
 @app.on_event("startup")
 def startup_event():
     sample_tracks = [
@@ -209,12 +258,14 @@ def startup_event():
 
 @app.post("/storysong/match")
 async def storysong_match(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
     vibe: str = Form(""),
     number: int = Form(5),
 ):
     try:
-        image_bytes = await file.read()
+        image_bytes = None
+        if file and hasattr(file, "read") and file.filename:
+            image_bytes = await file.read()
         vibe_data = extract_story_vibe(image_bytes, vibe_text=vibe)
         recommendations = match_story_songs(vibe_data, number=number)
         return {
