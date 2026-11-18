@@ -2,6 +2,11 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback } f
 import { ML_BASE_URL, getSimilarRecommendations } from "../api/musicApi";
 import { sameId, unwrapSong } from "../utils/music";
 
+const isSoundEffectUrl = (url) => {
+    if (!url || typeof url !== "string") return true;
+    return url.includes("actions.google.com/sounds");
+};
+
 const defaultPlayerContext = {
     currentSong: null,
     isPlaying: false,
@@ -137,8 +142,40 @@ export function PlayerProvider({ children }) {
         setCurrentTime(0);
         setIsLoadingAudio(true);
 
-        // Instant catalog metadata & quick-start preview
-        let catalogPreviewUrl = "";
+        // Track playback state across parallel resolvers
+        let playbackStarted = false;
+
+        const attemptPlay = async (audioSource, trackDuration = null) => {
+            if (activeSongIdRef.current !== songIdentifier || !audioSource) return false;
+            try {
+                if (audio.src !== audioSource) {
+                    const prevTime = audio.currentTime || 0;
+                    audio.src = audioSource;
+                    audio.load();
+                    if (prevTime > 0 && trackDuration && prevTime < trackDuration) {
+                        try {
+                            audio.currentTime = prevTime;
+                        } catch {}
+                    }
+                }
+                await audio.play();
+                playbackStarted = true;
+                setIsPlaying(true);
+                setIsLoadingAudio(false);
+                if (trackDuration) setDuration(trackDuration);
+                return true;
+            } catch (err) {
+                console.warn("Audio play attempt rejected by browser:", err);
+                return false;
+            }
+        };
+
+        // 1. FAST-START: If song already has an audioUrl (database seed or cached), play instantly
+        if (unwrapped.audioUrl && typeof unwrapped.audioUrl === "string" && !isSoundEffectUrl(unwrapped.audioUrl)) {
+            attemptPlay(unwrapped.audioUrl);
+        }
+
+        // 2. Parallel Fast Catalog Lookup: Worldwide Apple CDN responds in ~150-250ms
         const queryTerm = encodeURIComponent(`${unwrapped.title} ${unwrapped.artist || ""}`.trim());
         const catalogPromise = fetch(`https://itunes.apple.com/search?term=${queryTerm}&entity=song&limit=1`)
             .then((r) => r.json())
@@ -148,14 +185,19 @@ export function PlayerProvider({ children }) {
                     const cover = hit.artworkUrl100.replace("100x100bb", "600x600bb");
                     setCurrentSong((prev) => (prev ? { ...prev, coverUrl: cover } : prev));
                 }
-                if (hit?.previewUrl) {
-                    catalogPreviewUrl = hit.previewUrl;
-                }
                 return hit;
             })
             .catch(() => null);
 
-        // Smart endpoint prioritizing: when on localhost, localhost:8000 is checked FIRST (no 6s Render delay!)
+        // As soon as catalog metadata resolves, immediately play preview if not yet playing
+        catalogPromise.then((hit) => {
+            if (!playbackStarted && hit?.previewUrl && activeSongIdRef.current === songIdentifier) {
+                const previewSec = hit.trackTimeMillis ? Math.round(hit.trackTimeMillis / 1000) : 30;
+                attemptPlay(hit.previewUrl, previewSec);
+            }
+        });
+
+        // 3. Smart ML endpoint resolving (local first on localhost, then cloud)
         const isLocal =
             typeof window !== "undefined" &&
             (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
@@ -179,11 +221,9 @@ export function PlayerProvider({ children }) {
             }
         }
 
-        let fullStreamStarted = false;
-
-        // 1. Try Direct Full-Length Google CDN Stream URL
+        // 4. Query ML audio stream endpoint with 3s timeout
         for (const endpoint of uniqueEndpoints) {
-            if (fullStreamStarted || activeSongIdRef.current !== songIdentifier) break;
+            if (activeSongIdRef.current !== songIdentifier) break;
             const isMixed =
                 typeof window !== "undefined" &&
                 window.location.protocol === "https:" &&
@@ -192,7 +232,7 @@ export function PlayerProvider({ children }) {
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
                 const res = await fetch(
                     `${endpoint}/audio/stream?title=${encodeURIComponent(
                         unwrapped.title
@@ -204,72 +244,27 @@ export function PlayerProvider({ children }) {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.stream_url && activeSongIdRef.current === songIdentifier) {
-                        try {
-                            const prevTime = audio.currentTime || 0;
-                            audio.src = data.stream_url;
-                            audio.load();
-                            if (prevTime > 0 && prevTime < (data.duration || 100)) {
-                                audio.currentTime = prevTime;
-                            }
-                            await audio.play();
-                            fullStreamStarted = true;
-                            setIsPlaying(true);
-                            setIsLoadingAudio(false);
-                            if (data.duration) setDuration(data.duration);
+                        const upgraded = await attemptPlay(data.stream_url, data.duration);
+                        if (upgraded) {
                             if (data.thumbnail && !unwrapped.coverUrl) {
                                 setCurrentSong((prev) => (prev ? { ...prev, coverUrl: data.thumbnail } : prev));
                             }
                             return;
-                        } catch (playErr) {
-                            console.warn("Direct stream play rejected, falling back to proxy:", playErr);
                         }
                     }
                 }
-            } catch (fetchErr) {
-                console.warn(`Stream fetch error from ${endpoint}:`, fetchErr);
+            } catch (err) {
+                // Endpoint offline, timed out or blocked
             }
         }
 
-        // 2. Try Backend Audio Streaming Proxy (Bypasses Google CDN 403 Forbidden on remote clients)
-        for (const endpoint of uniqueEndpoints) {
-            if (fullStreamStarted || activeSongIdRef.current !== songIdentifier) break;
-            const isMixed =
-                typeof window !== "undefined" &&
-                window.location.protocol === "https:" &&
-                endpoint.startsWith("http://");
-            if (isMixed) continue;
-
-            try {
-                const proxyUrl = `${endpoint}/audio/proxy?title=${encodeURIComponent(
-                    unwrapped.title
-                )}&artist=${encodeURIComponent(unwrapped.artist || "")}`;
-
-                const prevTime = audio.currentTime || 0;
-                audio.src = proxyUrl;
-                audio.load();
-                if (prevTime > 0) audio.currentTime = prevTime;
-                await audio.play();
-                fullStreamStarted = true;
-                setIsPlaying(true);
-                setIsLoadingAudio(false);
-                return;
-            } catch (proxyErr) {
-                console.warn(`Proxy stream error from ${endpoint}:`, proxyErr);
-            }
-        }
-
-        // 3. Instant Catalog Fallback if backend stream is not available
-        if (!fullStreamStarted && activeSongIdRef.current === songIdentifier) {
-            await catalogPromise;
-            if (catalogPreviewUrl) {
-                try {
-                    audio.src = catalogPreviewUrl;
-                    audio.load();
-                    await audio.play();
-                    setIsPlaying(true);
-                    setIsLoadingAudio(false);
-                    return;
-                } catch {}
+        // 5. Ultimate Fallback: Ensure audio playback is running via catalog preview or backup
+        if (!playbackStarted && activeSongIdRef.current === songIdentifier) {
+            const hit = await catalogPromise;
+            if (hit?.previewUrl) {
+                await attemptPlay(hit.previewUrl);
+            } else if (unwrapped.audioUrl && !isSoundEffectUrl(unwrapped.audioUrl)) {
+                await attemptPlay(unwrapped.audioUrl);
             }
         }
 

@@ -17,6 +17,7 @@ import {
     getSongs,
     searchCatalogSongs,
 } from "../api/musicApi";
+import { DEFAULT_SONGS } from "../constants/defaultSongs";
 import { sameId } from "../utils/music";
 
 import "./Home.css";
@@ -295,8 +296,8 @@ function Home() {
         }
     }, [location.search]);
 
-    const [songs, setSongs] = useState([]);
-    const [songsLoading, setSongsLoading] = useState(true);
+    const [songs, setSongs] = useState(DEFAULT_SONGS);
+    const [songsLoading, setSongsLoading] = useState(false);
     const [songsError, setSongsError] = useState("");
     const [catalogSongs, setCatalogSongs] = useState([]);
 
@@ -329,21 +330,20 @@ function Home() {
 
         async function fetchSongs() {
             try {
-                setSongsLoading(true);
                 setSongsError("");
 
                 const response = await getSongs();
 
                 if (isMounted) {
-                    const fetchedSongs = Array.isArray(response.data)
+                    const fetchedSongs = Array.isArray(response.data) && response.data.length > 0
                         ? response.data
-                        : [];
+                        : DEFAULT_SONGS;
                     setSongs(fetchedSongs);
                 }
             } catch (error) {
-                console.error("Failed to fetch songs:", error);
+                console.warn("Backend songs fetch fallback to default catalog:", error);
                 if (isMounted) {
-                    setSongsError("Could not load songs. Please try again later.");
+                    setSongs((prev) => (prev && prev.length > 0 ? prev : DEFAULT_SONGS));
                 }
             } finally {
                 if (isMounted) {

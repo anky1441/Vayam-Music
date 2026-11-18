@@ -507,8 +507,12 @@ export const searchCatalogSongs = async (query, limit = 8) => {
 
   if (!isMixedContent) {
     try {
+      const isLocalHost =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const searchTimeout = isLocalHost ? 2500 : 1200;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), searchTimeout);
       const response = await fetch(
         `${ML_BASE_URL}/songs/search?query=${encodeURIComponent(q)}&limit=${limit}`,
         { signal: controller.signal }
